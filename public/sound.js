@@ -150,10 +150,18 @@
       }
     },
     chirp() { if (!ac()) return; const t = ctx.currentTime; for (let i = 0; i < 3; i++) tone(t + i * 0.09, 'sine', 3200, 4600, 0.12, 0.005, 0.06); },
+    // 바람 소리 — 소리가 스르르 차올랐다 빠진다(갑자기 시작하면 '탁' 하고 튄다)
     whoosh(dur = 0.5) {
       if (!ac()) return; const t = ctx.currentTime;
-      const f = noise(t, dur + 0.1, 'bandpass', 500, 1.2, 0.35, dur);
-      f.frequency.exponentialRampToValueAtTime(2400, t + dur);
+      const src = ctx.createBufferSource(); src.buffer = noiseBuf;
+      const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = 0.9;
+      f.frequency.setValueAtTime(420, t); f.frequency.exponentialRampToValueAtTime(1800, t + dur);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(0.22, t + dur * 0.4);
+      g.gain.linearRampToValueAtTime(0, t + dur);
+      src.connect(f); f.connect(g); g.connect(master);
+      src.start(t, Math.random() * 1.5); src.stop(t + dur + 0.05);
     },
     slash() {
       if (!ac()) return; const t = ctx.currentTime;

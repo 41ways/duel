@@ -319,8 +319,24 @@ body[data-mode="samurai"] {
   --paper: #ece5d6; --paper-hi: #f5efe2; --ink: #16151c; --ink-soft: #16151c80; --red: #a3221b;
   --silk: #1c2336; --gold: #b89b5e; --brush: "Nanum Brush Script", "Hahmlet", cursive; --jp: "Yuji Syuku", "Noto Serif JP", "Hahmlet", serif;
 }
-body[data-mode="samurai"] .back { background: #0b0e16e6; color: #ece5d6; }
-body[data-mode="samurai"] .back:hover { background: var(--red); }
+/* 뒤로가기 — 금테 두른 옻칠 나무패, 붓글씨, 왼쪽 끝에 붉은 인 */
+body[data-mode="samurai"] .back {
+  clip-path: none; border-radius: 2px; padding: 8px 20px 9px 44px;
+  background: linear-gradient(180deg, #1d1712, #0c0908); color: #ece5d6;
+  font: 27px/1 var(--brush); letter-spacing: .01em;
+  box-shadow: inset 0 0 0 1px #b89b5eaa, inset 0 0 0 4px #0c0908, inset 0 0 0 5px #b89b5e40, 0 6px 16px #000a;
+  transition: background .25s, color .25s, box-shadow .25s, transform .25s;
+}
+body[data-mode="samurai"] .back::before {
+  content: ""; position: absolute; left: 13px; top: 50%; width: 20px; height: 20px; margin-top: -10px;
+  background: var(--red); border-radius: 2px; transform: rotate(45deg) scale(.72);
+  box-shadow: inset 0 0 0 2px #e8c9a355; transition: transform .25s;
+}
+body[data-mode="samurai"] .back:hover {
+  background: linear-gradient(180deg, #2a1f17, #150f0b); color: #fff6e2;
+  box-shadow: inset 0 0 0 1px #e0c07a, inset 0 0 0 4px #150f0b, inset 0 0 0 5px #e0c07a66, 0 8px 20px #000c, 0 0 18px #a3221b55;
+}
+body[data-mode="samurai"] .back:hover::before { transform: rotate(45deg) scale(.9); }
 body[data-mode="samurai"] .icon { border-color: #ece5d655; background: #0b0e16cc; color: #ece5d6; }
 body[data-mode="samurai"] .btn.primary:hover { background: #7e1812; border-color: #7e1812; }
 
@@ -462,7 +478,13 @@ body[data-mode="samurai"] .helpbox { background: var(--paper-hi); }
 .keys-note.wide li span { width: 44px; }
 body[data-mode="samurai"] .chat { background: #0a0d16e8; border-top: 2px solid #b89b5e88; }
 body[data-mode="samurai"] .chat-kicker { font: 18px/1 var(--jp); letter-spacing: .3em; color: var(--gold); }
-body[data-mode="samurai"] #chatLog li b { font: 900 12px var(--kr); color: var(--gold); }
+body[data-mode="samurai"] #chatLog li b { font: 900 15px var(--kr); color: var(--gold); }
+/* 채팅 — 창은 낮게, 글자는 크게 */
+@media (min-width: 761px) { body[data-mode="samurai"] #lobby { grid-template-rows: 1fr minmax(128px, 21vh); } }
+body[data-mode="samurai"] .chat { padding: 7px 16px 9px; gap: 4px; }
+body[data-mode="samurai"] .chat-kicker { font-size: 15px; }
+body[data-mode="samurai"] #chatLog { font-size: 17px; gap: 2px; }
+body[data-mode="samurai"] #chatIn { font-size: 17px; padding: 4px 2px; }
 body[data-mode="samurai"] .slotmenu { background: var(--paper-hi); }
 
 /* 결과 */
@@ -509,7 +531,7 @@ body[data-mode="samurai"] #stage { cursor: default; }
 .mv-light .mv-in { left: calc(50% - 19vmin); top: calc(50% + 9vmin); }
 .mv-guard .mv-in { left: calc(50% + 19vmin); top: calc(50% + 9vmin); }
 .mv i { font: clamp(44px, 7vmin, 84px)/1 var(--jp); font-style: normal; }
-.mv b { font: 900 clamp(15px, 1.5vw, 20px) var(--kr); letter-spacing: .3em; }
+.mv b { font: 900 clamp(20px, 2.1vw, 28px) var(--kr); letter-spacing: .24em; padding-left: .24em; }
 .mv kbd { min-width: 24px; background: #ece5d6; color: #16151c; border-color: #16151c; font: 900 12px var(--kr); }
 .mv:hover, .mv:focus-visible { background: rgba(200,190,170,.13); outline: none; }
 .mv:hover .mv-in, .mv:focus-visible .mv-in { transform: translate(-50%, -50%) scale(1.35); text-shadow: 0 0 22px #ffe2b0aa, 0 2px 12px #000; }
@@ -526,10 +548,9 @@ body[data-mode="samurai"] #stage { cursor: default; }
 #moves.timing .mv-timer { animation: samTimer 5s linear forwards; }
 @keyframes samTimer { from { --left: 1; } to { --left: 0; } }
 .mv-rule { position: absolute; left: 50%; top: calc(50% + 25vmin); transform: translateX(-50%); margin: 0; white-space: nowrap; pointer-events: none; font: 16px/1 var(--jp); letter-spacing: .25em; color: #ece5d6aa; text-shadow: 0 1px 4px #000; }
-/* 고른 뒤 — 고른 칸만 붉게 남고 나머지는 가라앉는다 */
-#moves.locked .mv { pointer-events: none; opacity: .25; }
-#moves.locked .mv.picked { opacity: 1; background: rgba(163,34,27,.28); }
-#moves.locked .mv.picked .mv-in { transform: translate(-50%, -50%) scale(1.35); }
+/* 고른 뒤 — 무엇을 골랐는지 드러나지 않게 세 칸이 똑같이 가라앉는다 */
+#moves.locked .mv { pointer-events: none; opacity: .25; background: none; }
+#moves.locked .mv .mv-in { transform: translate(-50%, -50%); text-shadow: none; }
 #moves.locked .mv-timer { animation-play-state: paused; opacity: .4; }
 body.seats #moves .mv { pointer-events: none; }
 

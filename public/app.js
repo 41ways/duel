@@ -192,18 +192,17 @@
 
   // 한 기기에서 같이 할 때 자리별 키. 혼자면 마우스(아무 데나 클릭)
   const KEYSETS = { 2: ['Space', 'Enter'], 3: ['KeyA', 'Space', 'Enter'], 4: ['KeyA', 'Space', 'Enter', 'Mouse'] };
-  const KEY_LABEL = { Space: 'SPACE', Enter: 'ENTER', KeyA: 'A', Mouse: '좌클릭', ASD: 'A W D', JKL: 'J I L' };
-  // 사무라이 — Y자: 왼쪽 속공 · 위 강공 · 오른쪽 방어. 왼쪽 자리 A W D(혼자면 화살표도), 오른쪽 자리 J I L
+  const KEY_LABEL = { Space: 'SPACE', Enter: 'ENTER', KeyA: 'A', Mouse: '좌클릭', ASD: 'A W D', ARW: '← ↑ →' };
+  // 사무라이 — Y자: 왼쪽 속공 · 위 강공 · 오른쪽 방어. 왼쪽 자리 A W D, 오른쪽 자리 화살표(혼자면 둘 다)
   const SAM_KEYS = {
     KeyA: ['ASD', 'light'], KeyW: ['ASD', 'heavy'], KeyD: ['ASD', 'guard'],
-    ArrowLeft: ['ASD', 'light'], ArrowUp: ['ASD', 'heavy'], ArrowRight: ['ASD', 'guard'],
-    KeyJ: ['JKL', 'light'], KeyI: ['JKL', 'heavy'], KeyL: ['JKL', 'guard'],
+    ArrowLeft: ['ARW', 'light'], ArrowUp: ['ARW', 'heavy'], ArrowRight: ['ARW', 'guard'],
   };
   const SAM_CLASH_MS = 1450;   // samuraistart 소리(1.56초)가 끝나 갈 즈음 스쳐 지나간다 — samurai.js 와 맞춘다
   /** 이 기기에서 조작하는 자리들(나 먼저, 들어온 순서) → [{id, key}] */
   function mySeats(players, meId, m = mode) {
     const seats = players.filter(p => p.id === meId || (p.local && p.owner === meId));
-    if (m === 'samurai') return seats.map((p, i) => ({ id: p.id, key: i ? 'JKL' : 'ASD' }));
+    if (m === 'samurai') return seats.map((p, i) => ({ id: p.id, key: i ? 'ARW' : 'ASD' }));
     const keys = KEYSETS[seats.length];
     return seats.map((p, i) => ({ id: p.id, key: keys ? keys[i] : 'Mouse' }));
   }
@@ -213,7 +212,7 @@
     if (G.fighters && !G.fighters.includes(pid)) return;
     const sam = G.cfg.mode === 'samurai';
     if (sam && (!move || G.phase !== 'signal')) return;   // 사무라이는 고르기가 열렸을 때만
-    const sound = () => (sam ? S.play('swordout', 0.8, () => S.clink()) : S.shot(false));
+    const sound = () => (sam ? S.swing() : S.shot(false));   // 사무라이는 칼 휘두르는 소리, 서부는 총성
     if (G.phase === 'wait') {
       G.locked.add(pid);
       west.shoot(pid, move);
@@ -231,23 +230,19 @@
     }
   }
 
-  // 기술 단추 — 고르면 나머지는 흐려진다(혼자일 때만 누를 수 있다)
+  // 기술 단추 — 고르면 세 칸 모두 흐려진다(혼자일 때만 누를 수 있다)
   function resetMoves() {
     document.body.classList.remove('live');
     const box = $('#moves');
     box.classList.remove('locked', 'timing');
-    box.querySelectorAll('.mv').forEach(b => b.classList.remove('picked'));
     const two = !!(G && G.keys);
     document.body.classList.toggle('seats', two);
-    const K = { light: ['A', 'J'], heavy: ['W', 'I'], guard: ['D', 'L'] };
+    const K = { light: ['A', '←'], heavy: ['W', '↑'], guard: ['D', '→'] };
     box.querySelectorAll('kbd[data-k]').forEach(k => { k.textContent = two ? K[k.dataset.k].join('·') : K[k.dataset.k][0]; });
   }
   function markMove(pid, move) {
     if (!move || (G.keys && pid !== G.foreId)) return;
-    const box = $('#moves');
-    box.classList.add('locked');
-    const b = box.querySelector(`.mv[data-move="${move}"]`);
-    if (b) b.classList.add('picked');
+    $('#moves').classList.add('locked');   // 무엇을 골랐는지는 표시하지 않는다
   }
   $('#moves').addEventListener('pointerdown', e => {
     const b = e.target.closest('.mv');

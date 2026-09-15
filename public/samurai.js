@@ -117,12 +117,22 @@
     this.fore.gone = false; this.fore.raiseAt = -1e9; this.fore.move = null; this.fore.misfire = false;
     this.samSparks = []; this.samPetals = [];
     if (ev.r === 1) {
-      this.startWipe('samversus', () => { this.versusAt = now() + 380; this._samVsHit = false; this.later(() => this.S && this.S.swing(), 300); }, 'sakura');
+      // 결투 시작을 누른 순간 이미 선수 소개로 넘어가고 있으면(startMatch) 다시 닦지 않는다
+      if (this.view !== 'samversus') this.startWipe('samversus', () => { this.versusAt = now() + 380; this._samVsHit = false; this.later(() => this.S && this.S.swing(), 300); }, 'sakura');
       this.later(() => this.startWipe('samduel', () => { this.duelAt = now(); }, 'sakura'), 3000);
     } else {
       this.startWipe('samduel', () => { this.duelAt = now(); }, 'sakura');
     }
   };
+
+  /** 결투 시작 — 대기실이 사라지자마자 벚꽃이 쓸고 선수 소개로(첫 판 신호를 기다리며 뚝 끊기지 않게) */
+  P.startMatch = (function (orig) {
+    return function (o) {
+      orig.call(this, o);
+      if (!isSam(this) || this.view === 'samversus') return;
+      this.startWipe('samversus', () => { this.versusAt = now() + 380; this._samVsHit = false; this.later(() => this.S && this.S.swing(), 300); }, 'sakura');
+    };
+  })(P.startMatch);
 
   P.decoy = function (ev) {
     if (!isSam(this)) return base.decoy.call(this, ev);
@@ -211,9 +221,12 @@
 
   P.startWipe = (function (orig) {
     return function (to, onMid, kind) {
+      const from = this.view;
       orig.call(this, to, onMid, kind);
       if (kind !== 'sakura' || !this.wipe) return;
       this.wipe.dur = 1150;
+      // 선수 소개는 떠 둔 한 장 대신 꽃잎이 다 지나갈 때까지 계속 움직이게 그린다
+      if (from === 'samversus') this.wipe.live = from;
       const R = Math.random;
       this.wipe.petals = Array.from({ length: 150 }, () => ({
         u: -0.5 + R() * 1.9, y: R() * 1.1 - 0.05, s: 0.35 + R() * R() * 1.1, rot: R() * TAU, vr: (R() - 0.5) * 9,
@@ -233,20 +246,40 @@
     const x = lerp(W + R * 0.4, -R * 1.5, easeIO(p));
     this.onWipe && this.onWipe({ oldRight: x + R * 0.15, newLeft: x + R * 0.85 });
     // 아직 꽃잎이 지나가지 않은 왼쪽은 옛 화면
+    // 이음매는 분홍으로 덮지 않고 옛 화면을 가는 띠 여러 장으로 점점 옅게 겹쳐 흐린다
+    const edge = x + R * 0.15, fade = R * 0.9, strips = 10;
+    if (w.live) {
+      // 옛 장면을 떠 둔 캔버스에 이번 프레임으로 다시 그린다
+      const g = w.snap.getContext('2d'), view = this.view;
+      this.ctx = g; this.view = w.live;
+      g.setTransform(dpr, 0, 0, dpr, 0, 0);
+      g.fillStyle = '#05070c'; g.fillRect(0, 0, W, H);
+      try { g.save(); this.drawSamVersus(t); g.restore(); }
+      finally { this.ctx = ctx; this.view = view; }
+    }
     ctx.save();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.beginPath(); ctx.rect(0, 0, Math.max(0, (x + R * 0.5) * dpr), H * dpr); ctx.clip();
+    ctx.beginPath(); ctx.rect(0, 0, Math.max(0, edge * dpr), H * dpr); ctx.clip();
     ctx.drawImage(w.snap, 0, 0);
     ctx.restore();
+    for (let i = 0; i < strips; i++) {
+      const sx = edge + fade * i / strips;
+      if (sx >= W || sx + fade / strips <= 0) continue;
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.globalAlpha = 1 - (i + 0.5) / strips;
+      ctx.beginPath(); ctx.rect(Math.max(0, sx * dpr), 0, (fade / strips) * dpr + 1, H * dpr); ctx.clip();
+      ctx.drawImage(w.snap, 0, 0);
+      ctx.restore();
+    }
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    // 꽃잎 바람 한가운데의 옅은 분홍 안개 — 두 화면의 이음매를 덮는다
-    const haze = ctx.createLinearGradient(x - R * 0.3, 0, x + R * 1.3, 0);
+    // 꽃잎 무리 안쪽에만 아주 옅은 벚꽃빛
+    const haze = ctx.createLinearGradient(x, 0, x + R * 1.2, 0);
     haze.addColorStop(0, 'rgba(246,224,230,0)');
-    haze.addColorStop(0.35, 'rgba(246,224,230,.92)');
-    haze.addColorStop(0.55, 'rgba(240,214,222,.8)');
-    haze.addColorStop(1, 'rgba(240,214,222,0)');
+    haze.addColorStop(0.45, 'rgba(246,224,230,.14)');
+    haze.addColorStop(1, 'rgba(246,224,230,0)');
     ctx.fillStyle = haze;
-    ctx.fillRect(x - R * 0.3, 0, R * 1.6, H);
+    ctx.fillRect(x, 0, R * 1.2, H);
     const sprites = this.samPetalSprites();
     // save/restore 없이 변환 행렬을 바로 넣는다 — 꽃잎이 많아도 끊기지 않게
     ctx.fillStyle = 'rgba(244,196,206,.95)';
@@ -600,9 +633,11 @@
     this._samPair = both ? (this._samPair || t) : 0;
     if (both) {
       const se = easeOut((t - this._samPair) / 260);
-      const size = Math.min(oh * 0.26, 84);
+      const size = Math.min(oh * 0.22, 72);
       ctx.save();
-      ctx.translate(r.left + r.width * 0.5, r.top + r.height * 0.16);
+      // 상대 깃발(장대 왼쪽으로 늘어진 천) 이름을 가리지 않게 천 왼쪽 끝에서 한 뼘 더 떨어뜨린다
+      const clothLeft = ox - oh * 0.08 - Math.min(oh * 0.17, oh * 0.21);
+      ctx.translate(Math.min(r.left + r.width * 0.5, clothLeft - size * 1.15), r.top + r.height * 0.13);
       ctx.scale(lerp(1.9, 1, se), lerp(1.9, 1, se));
       this.drawSeal('対', 0, 0, size, -0.06, se);
       ctx.restore();
@@ -671,20 +706,25 @@
     // 발까지 드러나야 그림자가 짙어진다
     const ground = clamp((band.b - 0.7) / 0.3) * (1 - band.a);
     ctx.save();
+    // 발밑 그림자 — 가장자리가 없는 둥근 번짐 하나(발 사이가 가장 짙다)
     ctx.globalAlpha = ground;
-    const cs = ctx.createRadialGradient(ox, oy, 0, ox, oy, oh * 0.32);
-    cs.addColorStop(0, 'rgba(4,6,12,.7)'); cs.addColorStop(1, 'rgba(4,6,12,0)');
+    ctx.translate(ox, oy);
+    ctx.scale(1, 0.16);
+    const cs = ctx.createRadialGradient(0, 0, 0, 0, 0, oh * 0.3);
+    cs.addColorStop(0, 'rgba(3,4,9,.62)'); cs.addColorStop(0.45, 'rgba(3,4,9,.32)'); cs.addColorStop(1, 'rgba(3,4,9,0)');
     ctx.fillStyle = cs;
-    ctx.beginPath(); ctx.ellipse(ox, oy, oh * 0.32, oh * 0.05, 0, 0, TAU); ctx.fill();
-    ctx.fillStyle = 'rgba(4,6,12,.35)';
-    ctx.beginPath(); ctx.ellipse(ox + oh * 0.2, oy + oh * 0.01, oh * 0.28, oh * 0.03, -0.05, 0, TAU); ctx.fill();   // 달빛 반대편으로 길게
-    ctx.globalAlpha = 1;
+    ctx.beginPath(); ctx.arc(0, 0, oh * 0.3, 0, TAU); ctx.fill();
+    ctx.restore();
     this.samBandDraw(man, ox - w / 2, oy - oh + Math.sin(t / 1600) * 0.8, w, oh, band, 1);
-    // 발목께를 덮는 옅은 안개 — 먼 사람이 땅에 앉게
+    // 발목께를 덮는 옅은 안개 — 네모 틀이 보이지 않게 둥글게 번진다
+    ctx.save();
     ctx.globalAlpha = ground;
-    const fog = ctx.createLinearGradient(0, oy - oh * 0.18, 0, oy + oh * 0.04);
-    fog.addColorStop(0, 'rgba(120,135,165,0)'); fog.addColorStop(1, 'rgba(120,135,165,.28)');
-    ctx.fillStyle = fog; ctx.fillRect(ox - w * 0.6, oy - oh * 0.18, w * 1.2, oh * 0.22);
+    ctx.translate(ox, oy - oh * 0.02);
+    ctx.scale(1, 0.22);
+    const fog = ctx.createRadialGradient(0, 0, 0, 0, 0, w * 0.75);
+    fog.addColorStop(0, 'rgba(120,135,165,.18)'); fog.addColorStop(1, 'rgba(120,135,165,0)');
+    ctx.fillStyle = fog;
+    ctx.beginPath(); ctx.arc(0, 0, w * 0.75, 0, TAU); ctx.fill();
     ctx.restore();
   };
 
@@ -874,7 +914,6 @@
       ctx.scale(lerp(2, 1, se), lerp(2, 1, se));
       this.drawSeal(ch.jp, 0, 0, size, 0.08 * side, se);
       ctx.restore();
-      if (!p._vsSeal) { p._vsSeal = true; this.S && this.S.clunk(); }
     }
     // 우리말 가문 · YOU
     const te = easeOut((age - 900) / 400);
@@ -1338,7 +1377,7 @@
     ctx.restore();
   };
 
-  /** 내 뒷모습 — 자세를 잡으면 낮아지고, 고르면 고른 기술 글자가 떠오른다 */
+  /** 내 뒷모습 — 자세를 잡으면 낮아진다 */
   P.drawSamFore = function (t, since, stance) {
     const { ctx, W, H } = this;
     const back = this.samBack(this.fore.char, 0.5);
@@ -1348,22 +1387,8 @@
     const cx = W * 0.2, top = H * 0.2 + slideIn + stance * H * 0.05;
     const ra = t - this.fore.raiseAt;
     const grip = ra >= 0 && ra < 300 ? Math.sin(ra / 300 * Math.PI) * 5 : 0;
+    // 고른 기술은 결과 전까지 드러내지 않는다 — 칼자루를 고쳐 쥐는 움찔만
     ctx.drawImage(back, cx - w / 2 + grip, top + Math.sin(t / 1400) * 2, w, h);
-    if (ra >= 0 && ra < 1200 && this.fore.move) {
-      const e = easeOut(ra / 160), fade = clamp((1200 - ra) / 400);
-      const fs = Math.min(W, H) * 0.14;
-      ctx.save();
-      ctx.globalAlpha = Math.min(e, fade);
-      ctx.translate(W * 0.36, H * 0.34);
-      ctx.scale(lerp(1.7, 1, e), lerp(1.7, 1, e));
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.font = `${fs}px ${FONT_JP}`;
-      ctx.lineWidth = fs * 0.08; ctx.strokeStyle = 'rgba(0,0,0,.6)'; ctx.lineJoin = 'round';
-      ctx.strokeText(MOVE[this.fore.move].jp, 0, 0);
-      ctx.fillStyle = '#f4eee2';
-      ctx.fillText(MOVE[this.fore.move].jp, 0, 0);
-      ctx.restore();
-    }
   };
 
   /** 옆모습 · 무릎 그림 — 캄캄할 땐 까만 실루엣(누군지 모르게), 빛이 돌아오면 가문 색 */
@@ -1653,7 +1678,7 @@
     ctx.fillText(draw ? '＝' : res.winId === (me && me.id) ? '▶' : '◀', W / 2, cy - fs * 0.2);
     const why = {
       light: '속공이 강공을 앞지른다', heavy: '강공이 방어를 부순다', guard: '방어가 속공을 받아친다',
-      openHit: `${nameOf(res.loserId)}, 칼을 뽑지 못했다`, idle: '둘 다 칼을 뽑지 않았다', guardIdle: '막기만 하고 끝났다',
+      openHit: `${nameOf(res.loserId)}, 칼을 뽑지 못했다`, idle: '둘 다 칼을 뽑지 않았다',
       bothGuard: '서로 막았다', clash: '같은 기술, 칼끼리 맞부딪혔다', left: '상대가 떠났다',
     }[res.why] || '';
     ctx.font = `${fs * 0.62}px ${FONT_B}`; ctx.fillStyle = '#efe3c8';

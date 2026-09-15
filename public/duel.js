@@ -112,10 +112,8 @@
     if (isBad(b)) return { win: [a.id], out: [], why: 'early' };
     const act = x => x.st === 'ok';
     if (!act(a) && !act(b)) return { win: [], out: [], why: 'idle' };
-    if (!act(a) || !act(b)) {
-      const m = act(a) ? a : b;
-      return m.move === 'guard' ? { win: [], out: [], why: 'guardIdle' } : { win: [m.id], out: [], why: 'openHit' };
-    }
+    // 못 고르고 멈추면 무슨 기술이 와도(방어라도) 진다
+    if (!act(a) || !act(b)) return { win: [act(a) ? a.id : b.id], out: [], why: 'openHit' };
     // 같은 기술이면 칼끼리 맞부딪혀 비긴다
     if (a.move === b.move) return { win: [], out: [], why: a.move === 'guard' ? 'bothGuard' : 'clash' };
     const w = BEATS[a.move] === b.move ? a : b;

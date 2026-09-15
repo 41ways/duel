@@ -61,10 +61,11 @@ check('사무라이 — 같은 기술은 빠르기와 상관없이 무승부', (
   assert.deepStrictEqual(D.resolveSamurai([row(1, 'ok', 300, 'light'), row(2, 'ok', 900, 'light')]).why, 'clash');
   assert.deepStrictEqual(D.resolveSamurai([row(1, 'ok', 300, 'guard'), row(2, 'ok', 250, 'guard')]).win, []);
 });
-check('사무라이 — 먼저 움직이면 짐, 가만있으면 공격에 맞음', () => {
+check('사무라이 — 먼저 움직이면 짐, 멈추면 무엇에든(방어에도) 짐', () => {
   assert.deepStrictEqual(D.resolveSamurai([row(1, 'early'), row(2, 'late')]).win, [2]);
   assert.deepStrictEqual(D.resolveSamurai([row(1, 'late'), row(2, 'ok', 500, 'light')]).win, [2]);
-  assert.deepStrictEqual(D.resolveSamurai([row(1, 'late'), row(2, 'ok', 500, 'guard')]).win, []);
+  assert.deepStrictEqual(D.resolveSamurai([row(1, 'late'), row(2, 'ok', 500, 'guard')]).win, [2]);
+  assert.deepStrictEqual(D.resolveSamurai([row(1, 'late'), row(2, 'late')]).win, []);
 });
 
 console.log('흐름');
