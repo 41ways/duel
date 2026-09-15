@@ -269,13 +269,14 @@
 
   $('#startGameBtn').addEventListener('click', () => { S.unlock(); west.select(); view('select'); });
   $('#scene').addEventListener('pointermove', e => { if (document.body.dataset.view === 'select') west.selectHover(e.clientX); });
+  $('#soonBack').addEventListener('click', () => { west.selectReset(); view('select'); });
   $('#scene').addEventListener('pointerleave', () => { if (document.body.dataset.view === 'select') west.selectHover(null); });
   $('#scene').addEventListener('click', e => {
     if (document.body.dataset.view !== 'select') return;
     S.unlock();
     west.selectPick(e.clientX, side => {
       if (side === 'west') toHome();
-      else { toast('일기토는 준비 중이에요. 곧 열려요.'); setTimeout(() => west.selectReset(), 900); }
+      else view('soon');
     });
   });
   $('#createBtn').addEventListener('click', () => {
@@ -326,6 +327,9 @@
 
   /* ─────────────────────── 시작 ─────────────────────── */
 
+  west.btnRect = () => $('#startGameBtn').getBoundingClientRect();
+  $('#startGameBtn').addEventListener('pointerenter', () => west.titleHover(true));
+  $('#startGameBtn').addEventListener('pointerleave', () => west.titleHover(false));
   west.title();
   view('title');
   // 로고가 찍히고 나서 단추. 연출 도중에 누르면 건너뛴다

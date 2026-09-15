@@ -1,86 +1,155 @@
-/* 그림은 캔버스가 다 그린다. 여기는 단추와 전단 한 장뿐. */
+/* 그림은 캔버스가 그린다. 여기는 종이 · 단추 · 글자.
+   서부 = 현상수배서 (바랜 종이, 나무 활자, 붉은 별, 먹색 띠)
+   사무라이 = 수묵 (한지, 붓글씨, 붉은 낙관) */
+:root {
+  --paper: #e2c48c; --paper-hi: #efd9a8; --ink: #3b2414; --ink-soft: #3b241499; --red: #8e2a1c;
+  --wood: "Rye", "Hahmlet", serif; --slab: "Alfa Slab One", "Hahmlet", serif; --kr: "Hahmlet", serif;
+}
 * { box-sizing: border-box; }
-html, body { height: 100%; margin: 0; overflow: hidden; background: #0b0806; color: #2a1c12; font: 15px/1.5 "Pretendard Variable", system-ui, sans-serif; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; margin: 0; overflow: hidden; background: #0b0806; color: var(--ink); font: 15px/1.5 "Pretendard Variable", system-ui, sans-serif; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
 button, input, select { font: inherit; color: inherit; }
 #scene, #stage { position: fixed; inset: 0; width: 100%; height: 100%; }
 #stage { display: none; cursor: crosshair; touch-action: none; }
 body[data-view="game"] #stage { display: block; }
+body[data-view="select"] #scene { cursor: pointer; }
 
 .top { position: fixed; top: 0; left: 0; right: 0; z-index: 5; display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; }
-.brand { color: #fff8; text-decoration: none; font-weight: 700; font-size: 13px; }
-.icon { width: 36px; height: 36px; border: 0; border-radius: 50%; background: #0006; color: #fff; cursor: pointer; }
+.brand { color: #fff8; text-decoration: none; font: 13px var(--slab); letter-spacing: .08em; }
+.icon { width: 36px; height: 36px; border: 1px solid #e2c48c55; border-radius: 50%; background: #1a100acc; color: var(--paper); cursor: pointer; }
 #quitBtn { display: none; }
 body[data-view="game"] #quitBtn, body[data-view="lobby"] #quitBtn, body[data-view="over"] #quitBtn { display: inline-block; }
 
 .view { position: fixed; inset: 0; z-index: 3; display: none; padding: 60px 16px 24px; align-items: center; justify-content: flex-end; flex-direction: column; overflow-y: auto; }
-body[data-view="title"] #title, body[data-view="home"] #home, body[data-view="lobby"] #lobby, body[data-view="over"] #over { display: flex; }
-#home { align-items: flex-start; justify-content: flex-end; padding-left: max(16px, 4vw); }
-
+body[data-view="title"] #title, body[data-view="home"] #home, body[data-view="lobby"] #lobby, body[data-view="over"] #over, body[data-view="soon"] #soon { display: flex; }
 #title { padding-bottom: 14vh; }
-#startGameBtn { opacity: 0; transition: opacity .6s; }
+#startGameBtn { opacity: 0; transition: opacity .6s, transform .15s; }
 .ready #startGameBtn { opacity: 1; }
 
-.poster { width: min(360px, 100%); display: grid; gap: 10px; padding: 22px; background: #eadcbf; border-radius: 4px; box-shadow: 0 0 0 1px #3c2310, 0 20px 60px #000a; }
-.poster h2 { margin: 0; font: 900 44px/1 "Hahmlet", serif; color: #8e2f22; }
-.how { margin: 0; font-size: 13.5px; }
-.how b { color: #8e2f22; }
-input, select { border: 0; border-bottom: 2px solid #2a1c1280; background: #fff6; padding: 8px 10px; outline: none; user-select: text; min-width: 0; }
-hr { border: 0; border-top: 1px dashed #2a1c1255; margin: 4px 0; width: 100%; }
-.row { display: flex; gap: 8px; align-items: center; }
-.row > * { flex: 1; }
-.between { justify-content: space-between; }
-.between > * { flex: none; }
-.small { font-size: 13px; font-weight: 700; }
-small { font-size: 12px; opacity: .7; font-weight: 700; }
-.btn { padding: 10px 12px; border: 2px solid #2a1c12; border-radius: 6px; background: transparent; font-weight: 800; cursor: pointer; }
-.btn:disabled { opacity: .5; cursor: default; }
-.btn.primary { background: #8e2f22; border-color: #0005; color: #fbeedd; font: 900 19px "Hahmlet", serif; }
-.btn.big { width: min(320px, 90%); font-size: 26px; padding: 14px; flex: none; }
-.btn.slim { padding: 6px 10px; font-size: 13px; }
-.code { font: 900 30px/1 "Hahmlet", serif; letter-spacing: .14em; }
-.list { list-style: none; margin: 0; padding: 0; }
-.list li { display: flex; gap: 8px; align-items: center; padding: 7px 2px; border-bottom: 1px dashed #2a1c1240; }
-.list li span { flex: 1; font-weight: 700; }
-.list li em { font-style: normal; font-size: 12px; opacity: .7; }
-.list li.win span { color: #8e2f22; }
-.kick { border: 0; background: none; cursor: pointer; opacity: .5; }
-.err { margin: 0; color: #8e2f22; font-weight: 700; font-size: 13px; min-height: 1em; }
+/* ───────── 종이 ───────── */
+.poster, .result {
+  border: 34px solid transparent;
+  border-image: url(/img/paper_panel.png) 70 fill / 34px stretch;
+  filter: drop-shadow(0 18px 40px #000c);
+}
 
-#toast { position: fixed; left: 50%; bottom: 24px; z-index: 9; transform: translateX(-50%); background: #000d; color: #fff; padding: 9px 14px; border-radius: 8px; opacity: 0; transition: opacity .25s; pointer-events: none; }
+/* ───────── 단추 — 나무 활자 표 ───────── */
+.btn {
+  position: relative; padding: 10px 14px; cursor: pointer;
+  font: 900 16px var(--kr); letter-spacing: .02em;
+  color: var(--ink); background: #0000;
+  border: 2px solid var(--ink); border-radius: 2px;
+  box-shadow: inset 0 0 0 3px var(--paper), inset 0 0 0 4px var(--ink-soft);
+  transition: transform .08s, background .15s;
+}
+.btn:hover { background: #3b241414; }
+.btn:hover::before { content: "☞"; position: absolute; left: -26px; top: 50%; transform: translateY(-52%); font-size: 20px; color: var(--ink); }
+.btn:active { transform: translateY(1px); }
+.btn:disabled { opacity: .5; cursor: default; }
+.btn:disabled::before { content: none; }
+.btn.primary {
+  color: var(--paper-hi); background: var(--red); border-color: #2a0f08;
+  box-shadow: inset 0 0 0 3px var(--red), inset 0 0 0 4px #efd9a8aa;
+  font-size: 19px;
+}
+.btn.primary:hover { background: #a3321f; }
+.btn.big { padding: 14px 40px; font-size: 24px; }
+.btn.slim { padding: 6px 10px; font-size: 13px; }
+#startGameBtn.big { padding: 14px 46px; }
+#startGameBtn::before { content: none; }
+#startGameBtn:hover { transform: scale(1.05); }
+
+/* ───────── 처음 — 수배서 ───────── */
+#home { align-items: flex-start; justify-content: center; padding-left: max(16px, 5vw); }
+.poster { width: min(390px, 100%); display: grid; gap: 10px; text-align: center; }
+.poster .orn { margin: 0; font: 15px var(--slab); letter-spacing: .22em; display: flex; align-items: center; gap: 10px; }
+.poster .orn::before, .poster .orn::after { content: ""; flex: 1; border-top: 2px solid var(--ink); border-bottom: 1px solid var(--ink); height: 5px; }
+.poster h2 { margin: -4px 0 0; font: 900 64px/1 var(--kr); color: var(--ink); letter-spacing: .08em; }
+.poster .sub { margin: -4px 0 2px; font: 26px var(--wood); color: var(--red); letter-spacing: .12em; }
+.poster .sub::before, .poster .sub::after { content: "★"; font-size: 15px; vertical-align: 5px; margin: 0 10px; }
+.how { margin: 0 0 4px; font-size: 13.5px; line-height: 1.6; font-weight: 600; }
+.how b { color: var(--red); }
+.field { display: flex; align-items: baseline; gap: 8px; border-bottom: 2px dotted var(--ink); text-align: left; }
+.field span { font: 13px var(--slab); letter-spacing: .06em; }
+.field input { flex: 1; min-width: 0; border: 0; background: #0000; padding: 6px 2px; outline: none; font: 22px "Nanum Pen Script", cursive; color: #1f2946; user-select: text; }
+.field input::placeholder { color: #3b241466; }
+.row { display: flex; gap: 10px; align-items: center; }
+.row > * { flex: 1; min-width: 0; }
+.poster .row { flex-wrap: wrap; }
+.rule { margin: 4px 0; display: flex; align-items: center; gap: 10px; font: 12px var(--slab); letter-spacing: .2em; }
+.rule::before, .rule::after { content: ""; flex: 1; border-top: 1px dashed var(--ink-soft); }
+.small { font-size: 13px; font-weight: 700; }
+.small select, .bar select { border: 0; border-bottom: 1px solid currentColor; background: #0000; padding: 3px 2px; margin: 0 4px; outline: none; font-weight: 700; }
+.banner { margin: 6px -8px 0; padding: 7px 18px; background: var(--ink); color: var(--paper); font: 12px var(--slab); letter-spacing: .14em; clip-path: polygon(10px 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 10px 100%, 0 50%); }
+.err { margin: 0; color: var(--red); font-weight: 800; font-size: 13px; min-height: 1em; }
+small { font-size: 12px; opacity: .7; font-weight: 700; }
+
+/* ───────── 대기방 — 먹색 띠 ───────── */
+#lobby { padding: 0 0 12px; align-items: stretch; justify-content: flex-end; pointer-events: none; }
+.bar {
+  pointer-events: auto; margin: 0 12px; display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; justify-content: space-between;
+  padding: 12px 34px; color: var(--paper); background: #24160ce8;
+  box-shadow: inset 0 0 0 2px #24160c, inset 0 0 0 3px #e2c48c88;
+  clip-path: polygon(18px 0, calc(100% - 18px) 0, 100% 50%, calc(100% - 18px) 100%, 18px 100%, 0 50%);
+}
+.bar .btn { color: var(--paper); border-color: var(--paper); box-shadow: inset 0 0 0 3px #24160c, inset 0 0 0 4px #e2c48c88; }
+.bar .btn:hover::before { color: var(--paper); }
+.bar .btn.primary { box-shadow: inset 0 0 0 3px var(--red), inset 0 0 0 4px #efd9a8aa; border-color: #120804; }
+.bar select option { color: #222; }
+.code-box, .opts, .go { display: flex; gap: 12px; align-items: center; }
+.bar small { font: 11px var(--slab); letter-spacing: .15em; opacity: .75; }
+.code { font: 30px/1 var(--wood); letter-spacing: .12em; color: var(--paper-hi); }
+.bar .err { color: #ffb08a; }
+
+/* ───────── 결과 — 현상금 공고 ───────── */
+#over { align-items: center; justify-content: center; background: radial-gradient(ellipse at center, #0000 20%, #000b 100%); }
+.result { width: min(540px, 100%); text-align: center; animation: rise .5s cubic-bezier(.2,.8,.2,1) both; }
+.kicker { margin: 0; font: 34px/1 var(--wood); color: var(--red); letter-spacing: .1em; }
+.kicker::before, .kicker::after { content: "★"; font-size: 18px; vertical-align: 8px; margin: 0 12px; }
+.result h2 { margin: 6px 0 14px; padding-bottom: 12px; font: 900 clamp(32px, 6vw, 50px)/1.1 var(--kr); border-bottom: 3px double var(--ink); }
+.ranks { list-style: none; margin: 0 0 18px; padding: 0; }
+.ranks li { display: grid; grid-template-columns: 30px 56px 1fr auto; align-items: center; gap: 12px; padding: 8px 4px; border-bottom: 1px dashed var(--ink-soft); text-align: left; animation: rise .45s cubic-bezier(.2,.8,.2,1) both; animation-delay: calc(.25s + var(--i) * .09s); }
+.ranks .rk { font: 24px var(--wood); text-align: center; color: var(--ink-soft); }
+.ranks li.win .rk { color: var(--red); }
+.ranks img { width: 56px; height: 56px; object-fit: cover; object-position: top; border: 2px solid var(--ink); box-shadow: inset 0 0 0 2px var(--paper); filter: sepia(.85) contrast(1.1) brightness(.95); background: #cdb07a; }
+.ranks li.win img { filter: sepia(.35) contrast(1.05); }
+.ranks b { display: block; font: 900 20px var(--kr); }
+.ranks small { display: block; opacity: .75; font-weight: 700; }
+.ranks strong { font: 26px var(--wood); color: var(--ink); white-space: nowrap; }
+.ranks li.win strong { color: var(--red); }
+.ranks strong em { font: 12px var(--slab); font-style: normal; margin-left: 4px; }
+.acts { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; animation: rise .45s .6s both; }
+.wait { margin: 10px 0 0; font-weight: 700; font-size: 13px; }
+
+#toast { position: fixed; left: 50%; bottom: 28px; z-index: 9; transform: translateX(-50%); background: var(--paper); color: var(--ink); border: 2px solid var(--ink); box-shadow: inset 0 0 0 3px var(--paper), inset 0 0 0 4px var(--ink-soft), 0 8px 24px #000a; padding: 10px 18px; font-weight: 800; opacity: 0; transition: opacity .25s; pointer-events: none; }
 #toast.on { opacity: 1; }
 
-/* 대기실 — 벽은 캔버스, 아래 단추 줄만 */
-#lobby { padding: 0; align-items: stretch; justify-content: flex-end; pointer-events: none; }
-.bar { pointer-events: auto; display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; justify-content: space-between; padding: 14px 20px calc(14px + env(safe-area-inset-bottom)); background: linear-gradient(#0000, #140c06ee 30%); color: #f3e6cf; }
-.bar .btn { border-color: #f3e6cf99; color: #f3e6cf; }
-.bar .btn.primary { color: #fbeedd; border-color: #0005; }
-.bar select { background: #0000; color: #f3e6cf; border-bottom-color: #f3e6cf66; }
-.bar select option { color: #222; }
-.code-box, .opts, .go { display: flex; gap: 10px; align-items: center; }
-.bar small { opacity: .6; }
-.bar .err { color: #ffb08a; }
-@media (max-width: 700px) { #home { align-items: center; padding-left: 16px; } }
+/* ───────── 사무라이 — 수묵 ───────── */
+.ink { align-items: center; justify-content: center; background: #0008; }
+.scroll {
+  position: relative; width: min(460px, 100%); min-height: 420px; padding: 44px 40px 36px;
+  background: url(/img/washi.jpg) center / 512px; color: #141214;
+  box-shadow: 0 30px 70px #000c, inset 0 0 60px #6d5a3f33;
+  display: grid; justify-items: center; align-content: start; gap: 6px;
+  animation: unroll .7s cubic-bezier(.2,.8,.2,1) both;
+}
+.scroll::before, .scroll::after { content: ""; position: absolute; left: -10px; right: -10px; height: 16px; background: linear-gradient(#2b1d12, #5a4028 50%, #2b1d12); border-radius: 8px; }
+.scroll::before { top: -8px; }
+.scroll::after { bottom: -8px; }
+.brush { margin: 0; font: 110px/1.1 "Yuji Syuku", "Noto Serif JP", serif; }
+.vert { position: absolute; right: 34px; top: 48px; margin: 0; writing-mode: vertical-rl; font: 34px/1 "Nanum Brush Script", cursive; color: #2a2528; }
+.brush-sub { margin: 6px 0 22px; font: 28px "Nanum Brush Script", cursive; }
+.seal { position: absolute; left: 30px; top: 40px; width: 58px; height: 58px; display: grid; place-items: center; background: #b3261e; color: #f5e6d8; font: 15px/1 "Yuji Syuku", "Noto Serif JP", serif; writing-mode: vertical-rl; border-radius: 4px; transform: rotate(-4deg); box-shadow: inset 0 0 0 3px #b3261e, inset 0 0 0 4px #f5e6d855; }
+.btn.inkbtn { border: 0; box-shadow: none; color: #f5efe4; padding: 16px 46px; font: 30px "Nanum Brush Script", cursive; background: url(/img/ink_stroke.png) center / 100% 100% no-repeat; }
+.btn.inkbtn:hover { transform: scale(1.04); }
+.btn.inkbtn:hover::before { content: none; }
 
-body[data-view="select"] #scene { cursor: pointer; }
-
-/* 결과판 */
-#over { align-items: center; justify-content: center; background: radial-gradient(ellipse at center, #0000 20%, #000b 100%); }
-.result { width: min(560px, 100%); color: #f3e6cf; text-align: center; animation: rise .5s cubic-bezier(.2,.8,.2,1) both; }
-.kicker { margin: 0; font: 15px "Alfa Slab One", serif; letter-spacing: .5em; color: #d6a860; }
-.result h2 { margin: 4px 0 18px; font: 900 clamp(34px, 6vw, 56px)/1.1 "Hahmlet", serif; text-shadow: 0 4px 20px #000; }
-.ranks { list-style: none; margin: 0 0 22px; padding: 0; display: grid; gap: 8px; }
-.ranks li { display: grid; grid-template-columns: 34px 52px 1fr auto; align-items: center; gap: 12px; padding: 8px 14px 8px 10px; background: linear-gradient(90deg, #1a110bdd, #0d0806cc); border: 1px solid #c9a15e33; border-radius: 6px; text-align: left; animation: rise .45s cubic-bezier(.2,.8,.2,1) both; animation-delay: calc(.25s + var(--i) * .09s); }
-.ranks li.win { border-color: #e0b35e; background: linear-gradient(90deg, #4a3014ee, #1a110bdd); box-shadow: 0 0 30px #e0b35e33; }
-.ranks .rk { font: 22px "Alfa Slab One", serif; color: #a08a6a; text-align: center; }
-.ranks li.win .rk { color: #ffd98a; }
-.ranks img { width: 52px; height: 52px; object-fit: cover; object-position: top; border-radius: 50%; border: 2px solid #c9a15e66; filter: sepia(.7) contrast(1.05); background: #2a1c12; }
-.ranks li.win img { filter: none; border-color: #ffd98a; }
-.ranks b { display: block; font: 900 20px "Hahmlet", serif; }
-.ranks small { display: block; opacity: .6; font-weight: 600; }
-.ranks strong { font: 24px "Alfa Slab One", serif; color: #e0b35e; white-space: nowrap; }
-.ranks strong em { font: 700 12px "Pretendard Variable", sans-serif; font-style: normal; opacity: .7; margin-left: 4px; }
-.acts { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; animation: rise .45s .6s both; }
-.btn.ghost { border-color: #f3e6cf66; color: #f3e6cf; background: #0006; }
-.btn.primary.big { width: auto; padding: 12px 34px; font-size: 22px; border: 1px solid #e0b35e; box-shadow: 0 0 0 3px #8e2f2255, 0 8px 30px #0008; }
-.wait { opacity: .7; font-size: 13px; }
 @keyframes rise { from { opacity: 0; transform: translateY(16px); } }
+@keyframes unroll { from { clip-path: inset(0 0 100% 0); } to { clip-path: inset(0 0 0 0); } }
+
+@media (max-width: 700px) {
+  #home { align-items: center; padding-left: 16px; }
+  .poster, .result { border-width: 24px; }
+  .brush { font-size: 84px; }
+  .poster h2 { font-size: 52px; }
+  .bar { padding: 12px 28px; }
+}

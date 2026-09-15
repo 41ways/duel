@@ -36,7 +36,7 @@
   const FONT_T = '"Hahmlet", "Nanum Myeongjo", serif';
   const FONT_W = '"Alfa Slab One", Georgia, serif';
   const FONT_H = '"Nanum Pen Script", cursive';
-  const FONT_JP = '"Noto Serif JP", "Hahmlet", serif';
+  const FONT_JP = '"Yuji Syuku", "Noto Serif JP", "Hahmlet", serif';
 
   function load(src) {
     return new Promise(res => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = src; });
@@ -77,7 +77,7 @@
       names.forEach((n, i) => { this.img[n.replace(/\.\w+$/, '')] = imgs[i]; });
       this.sil = CHARS.map((c, i) => this.silhouette(this.img[c.key], i));
       this.puff = this.makePuff();
-      try { await Promise.all([document.fonts.load(`900 40px ${FONT_T}`), document.fonts.load(`40px ${FONT_W}`), document.fonts.load(`40px ${FONT_H}`), document.fonts.load(`900 40px ${FONT_JP}`, '一騎討')]); } catch (_) {}
+      try { await Promise.all([document.fonts.load(`900 40px ${FONT_T}`), document.fonts.load(`40px ${FONT_W}`), document.fonts.load(`40px ${FONT_H}`), document.fonts.load(`40px ${FONT_JP}`, '一騎討準備中'), document.fonts.load('40px Rye'), document.fonts.load('40px "Nanum Brush Script"')]); } catch (_) {}
     }
 
     /** 판초가 아닌 사람이 앞에 설 때 — 역광에 뭉개진 어깨 너머 실루엣 */
@@ -126,15 +126,16 @@
 
     title() {
       this.clearTimers(); this.view = 'title'; this.viewAt = now(); this.match = null;
-      this._tev = {}; this.sparks = [];
+      this._tev = {}; this.sparks = []; this.smokes = [];
     }
     /** 시작 화면 연출을 건너뛴다 */
     skipTitle() {
-      if (this.view !== 'title' || now() - this.viewAt > 2700) return;
-      this.viewAt = now() - 2700;
+      if (this.view !== 'title' || now() - this.viewAt > 2900) return;
+      this.viewAt = now() - 2900;
       this._tev = { s1: true, s2: true, sl: true, cl: true };
+      this.smokes = [];
     }
-    get titleDone() { return this.view !== 'title' || now() - this.viewAt > 2500; }
+    get titleDone() { return this.view !== 'title' || now() - this.viewAt > 2700; }
 
     /**
      * 처음 화면 · 대기실. others: [{id, char}] — 새로 온 사람은 지평선에서 걸어 나오고, 나간 사람은 돌아 걸어간다.
@@ -386,156 +387,150 @@
     /* ─────────── 시작 화면 ─────────── */
 
     /**
-     * 시작 화면 — 어둠 속 총 두 발. 총구 불빛에 "결투"가 얼핏 비치고,
-     * 칼이 화면을 비스듬히 베면 글자가 온전히 드러난다. 칼끼리 부딪히며 DUEL 과 게임 시작.
+     * 시작 화면 — 어둠 속 총 두 발. 총구 불빛에 "결투"가 얼핏 비치고 화약 연기가 번진다.
+     * 칼빛이 결과 투 사이를 비스듬히 베면 두 글자가 칼자국을 따라 살짝 엇갈린 채 드러나고,
+     * 글자 뒤에서 칼 두 자루가 맞부딪히며 DUEL 과 게임 시작.
      */
     drawTitle(t) {
       const { ctx, W, H } = this;
       const a = t - this.viewAt;
-      const S1 = 350, S2 = 950, SL = 1550, CL = 2350;
+      const S1 = 350, S2 = 1050, SL = 1750, CL = 2500;
       const cx = W / 2, cy = H * 0.42;
       const fs = Math.min(W * 0.3, H * 0.3);
       const ev = this._tev || (this._tev = {});
       const once = (k, at, fn) => { if (!ev[k] && a >= at) { ev[k] = true; fn(); } };
-      const clashP = { x: cx, y: cy + fs * 0.66 };
-      once('s1', S1, () => { this.S && this.S.shot(false); this.shakeIt(160, 9); });
-      once('s2', S2, () => { this.S && this.S.shot(false); this.shakeIt(160, 9); });
+      const muzzles = [
+        { k: 's1', at: S1, x: W * 0.03, y: H * 0.66, ang: -0.18, seed: 3 },
+        { k: 's2', at: S2, x: W * 0.97, y: H * 0.28, ang: Math.PI + 0.12, seed: 7 },
+      ];
+      for (const m of muzzles) {
+        once(m.k, m.at, () => {
+          this.S && this.S.shot(false);
+          this.shakeIt(170, 9);
+          this.smokes = this.smokes || [];
+          for (let i = 0; i < 22; i++) {
+            const sp = (0.2 + Math.random()) * fs * 0.9;
+            const an = m.ang + (Math.random() - 0.5) * 0.9;
+            this.smokes.push({ x: m.x + Math.cos(m.ang) * fs * 0.15, y: m.y + Math.sin(m.ang) * fs * 0.15, vx: Math.cos(an) * sp, vy: Math.sin(an) * sp - fs * 0.05, r: fs * (0.09 + Math.random() * 0.1), age: 0, life: 2.4 + Math.random() * 1.8 });
+          }
+        });
+      }
       once('sl', SL, () => { this.S && this.S.slash(); this.shakeIt(240, 7); });
       once('cl', CL, () => {
         this.S && this.S.clash();
-        this.shakeIt(320, 12);
-        this.flashes.push({ at: t, dur: 160 });
+        this.shakeIt(320, 11);
+        this.flashes.push({ at: t, dur: 140 });
         this.sparks = [];
-        for (let i = 0; i < 80; i++) {
-          const ang = -Math.PI * Math.random() + (Math.random() < 0.2 ? Math.PI * Math.random() : 0);
-          const sp = (0.4 + Math.random()) * fs * 3;
-          this.sparks.push({ x: clashP.x, y: clashP.y, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp, age: 0, life: 0.35 + Math.random() * 0.8 });
+        for (let i = 0; i < 90; i++) {
+          const ang = Math.random() * TAU;
+          const sp = (0.3 + Math.random()) * fs * 3.2;
+          const bp = this.btnCenter();
+          this.sparks.push({ x: bp.x, y: bp.y, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp, age: 0, life: 0.3 + Math.random() * 0.8 });
         }
       });
-      const muzzles = [{ at: S1, x: W * 0.04, y: H * 0.64, dir: 1 }, { at: S2, x: W * 0.96, y: H * 0.3, dir: -1 }];
-      const lit = Math.max(...muzzles.map(m => (a >= m.at ? Math.exp(-(a - m.at) / 190) : 0)));
-      const cut = a >= SL + 110;
+      const dt = Math.min(0.05, (t - (this._tlast || t)) / 1000); this._tlast = t;
 
-      // 한 장 그려 두고 칼자국을 따라 두 쪽으로 어긋나게 보여 준다
-      const buf = this._tbuf || (this._tbuf = document.createElement('canvas'));
-      if (buf.width !== this.cv.width || buf.height !== this.cv.height) { buf.width = this.cv.width; buf.height = this.cv.height; }
-      const g = buf.getContext('2d');
-      g.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
-      g.globalCompositeOperation = 'source-over';
-      g.globalAlpha = 1;
-      g.fillStyle = '#030201'; g.fillRect(0, 0, W, H);
-      const warm = cut ? easeOut((a - SL) / 700) : 0;
+      // 바탕
+      ctx.fillStyle = '#030201'; ctx.fillRect(0, 0, W, H);
+      const cut = a >= SL + 100;
+      const warm = cut ? easeOut((a - SL) / 800) : 0;
       if (warm > 0) {
-        const bg = g.createRadialGradient(cx, cy, 0, cx, cy, Math.max(W, H) * 0.7);
+        const bg = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(W, H) * 0.7);
         bg.addColorStop(0, `rgba(58,34,20,${warm})`); bg.addColorStop(0.6, `rgba(20,12,7,${warm})`); bg.addColorStop(1, 'rgba(4,2,1,0)');
-        g.fillStyle = bg; g.fillRect(0, 0, W, H);
+        ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
       }
-      for (const m of muzzles) {
-        const k = a >= m.at ? Math.exp(-(a - m.at) / 190) : 0;
-        if (k < 0.01) continue;
-        const lg = g.createRadialGradient(m.x, m.y, 0, m.x, m.y, W * 1.1);
-        lg.addColorStop(0, `rgba(255,214,150,${0.75 * k})`); lg.addColorStop(0.35, `rgba(150,90,40,${0.35 * k})`); lg.addColorStop(1, 'rgba(0,0,0,0)');
-        g.fillStyle = lg; g.fillRect(0, 0, W, H);
-      }
-      const textA = cut ? 1 : lit * 0.9;
-      if (textA > 0.01) {
-        g.save();
-        g.textAlign = 'center'; g.textBaseline = 'middle';
-        g.font = `900 ${fs}px ${FONT_T}`;
-        g.globalAlpha = textA;
-        const tg = g.createLinearGradient(0, cy - fs * 0.5, 0, cy + fs * 0.5);
-        tg.addColorStop(0, '#f7ead2'); tg.addColorStop(0.55, '#dcc29a'); tg.addColorStop(1, '#8e6c46');
-        g.fillStyle = tg;
-        g.shadowColor = 'rgba(0,0,0,.7)'; g.shadowBlur = fs * 0.08; g.shadowOffsetY = fs * 0.03;
-        g.fillText('결투', cx, cy);
-        g.restore();
-      }
-
-      // 칼자국 — 오른쪽 위에서 왼쪽 아래로
-      const p0 = { x: W * 0.78, y: -H * 0.05 }, p1 = { x: W * 0.22, y: H * 1.05 };
-      const nx = -(p1.y - p0.y), ny = p1.x - p0.x;
-      const nl = Math.hypot(nx, ny);
-      const split = a >= SL + 110 ? fs * 0.09 * (1 - easeOut((a - SL - 110) / 520)) : 0;
-      ctx.save();
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      const half = (sign) => {
-        ctx.save();
-        ctx.beginPath();
-        const far = Math.max(W, H) * 2 * this.dpr;
-        const ux = (nx / nl) * sign * far, uy = (ny / nl) * sign * far;
-        const P0 = { x: p0.x * this.dpr, y: p0.y * this.dpr }, P1 = { x: p1.x * this.dpr, y: p1.y * this.dpr };
-        const dx = (P1.x - P0.x) * 3, dy = (P1.y - P0.y) * 3;
-        ctx.moveTo(P0.x - dx, P0.y - dy); ctx.lineTo(P1.x + dx, P1.y + dy);
-        ctx.lineTo(P1.x + dx + ux, P1.y + dy + uy); ctx.lineTo(P0.x - dx + ux, P0.y - dy + uy);
-        ctx.closePath(); ctx.clip();
-        const off = split * this.dpr * sign;
-        ctx.drawImage(buf, (P1.x - P0.x) / Math.hypot(P1.x - P0.x, P1.y - P0.y) * off, (P1.y - P0.y) / Math.hypot(P1.x - P0.x, P1.y - P0.y) * off);
-        ctx.restore();
-      };
-      if (split > 0.3) { half(1); half(-1); } else ctx.drawImage(buf, 0, 0);
-      ctx.restore();
-
-      // 총구 불꽃과 예광선
+      let lit = 0;
       for (const m of muzzles) {
         const d = a - m.at;
-        if (d < 0 || d > 260) continue;
-        if (d < 70) this.drawMuzzle(m.x, m.y, Math.min(W, H) * 0.05, d * 1.2);
-        const tp = clamp(d / 70);
-        ctx.strokeStyle = `rgba(255,236,190,${0.9 * (1 - d / 260)})`;
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(m.x, m.y);
-        ctx.lineTo(m.x + m.dir * W * 1.05 * tp, m.y + (cy - m.y) * 0.3 * tp);
-        ctx.stroke();
+        const k = d >= 0 ? Math.exp(-d / 150) * (d < 30 ? 1 : 0.85 + 0.15 * Math.sin(d / 9)) : 0;
+        lit = Math.max(lit, k);
+        if (k < 0.01) continue;
+        const lg = ctx.createRadialGradient(m.x, m.y, 0, m.x, m.y, W * 1.1);
+        lg.addColorStop(0, `rgba(255,210,140,${0.8 * k})`); lg.addColorStop(0.3, `rgba(150,86,36,${0.35 * k})`); lg.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = lg; ctx.fillRect(0, 0, W, H);
       }
-      // 칼 빛
+
+      // 칼 두 자루 — 게임 시작 단추 뒤에서 X 로 맞부딪혀 그대로 걸린다
+      this.drawTitleSwords(t, a - CL, fs);
+
+      // 글자 — 칼 전엔 총구 불빛에만 비치고, 벤 뒤엔 칼자국을 따라 엇갈린다
+      ctx.save();
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.font = `900 ${fs}px ${FONT_T}`;
+      const w0 = ctx.measureText('결').width, w1 = ctx.measureText('투').width;
+      const gap = fs * 0.06;
+      const x0 = cx - (w0 + w1 + gap) / 2 + w0 / 2;
+      const x1 = x0 + w0 / 2 + gap + w1 / 2;
+      const gapX = x0 + w0 / 2 + gap / 2;
+      const cutAng = -1.12;                        // 오른쪽 위 → 왼쪽 아래
+      const ux = Math.cos(cutAng), uy = Math.sin(cutAng);
+      const shift = cut ? fs * lerp(0.26, 0.17, easeOut((a - SL - 100) / 500)) : 0;
+      const textA = cut ? 1 : lit * 0.92;
+      if (textA > 0.01) {
+        ctx.globalAlpha = textA;
+        const tg = ctx.createLinearGradient(0, cy - fs * 0.5, 0, cy + fs * 0.5);
+        tg.addColorStop(0, '#f7ead2'); tg.addColorStop(0.55, '#dcc29a'); tg.addColorStop(1, '#8e6c46');
+        ctx.fillStyle = tg;
+        ctx.shadowColor = 'rgba(0,0,0,.75)'; ctx.shadowBlur = fs * 0.08; ctx.shadowOffsetY = fs * 0.03;
+        ctx.fillText('결', x0 + ux * shift, cy + uy * shift);
+        ctx.fillText('투', x1 - ux * shift, cy - uy * shift);
+      }
+      ctx.restore();
+
+      // 벤 자국 — 글자 사이를 가로지르는 가는 선이 남는다
+      if (a >= SL + 110) {
+        const k = easeOut((a - SL - 110) / 400);
+        const reach = fs * 0.95;
+        ctx.save();
+        ctx.strokeStyle = `rgba(255,236,200,${0.55 * k})`;
+        ctx.lineWidth = Math.max(1, fs * 0.006);
+        ctx.shadowColor = 'rgba(255,220,160,.6)'; ctx.shadowBlur = 6;
+        ctx.beginPath();
+        ctx.moveTo(gapX - ux * reach, cy - uy * reach);
+        ctx.lineTo(gapX + ux * reach, cy + uy * reach);
+        ctx.stroke();
+        ctx.restore();
+      }
+      // 칼빛 — 결과 투 사이를 지나간다
       const sd = a - SL;
-      if (sd >= 0 && sd < 520) {
-        const p = easeOut(sd / 120);
-        const fade = 1 - clamp((sd - 120) / 400);
-        const ex = lerp(p0.x, p1.x, p), ey = lerp(p0.y, p1.y, p);
+      if (sd >= 0 && sd < 560) {
+        const len = Math.max(W, H) * 1.2;
+        const p0 = { x: gapX - ux * len / 2, y: cy - uy * len / 2 };
+        const p1 = { x: gapX + ux * len / 2, y: cy + uy * len / 2 };
+        const p = easeOut(sd / 110);
+        const fade = 1 - clamp((sd - 110) / 450);
         ctx.save();
         ctx.globalCompositeOperation = 'lighter';
         ctx.lineCap = 'round';
-        ctx.shadowColor = 'rgba(200,225,255,.9)'; ctx.shadowBlur = 30;
-        ctx.strokeStyle = `rgba(230,240,255,${0.95 * fade})`;
-        ctx.lineWidth = Math.max(2, fs * 0.03) * (0.4 + fade * 0.6);
-        ctx.beginPath(); ctx.moveTo(p0.x, p0.y); ctx.lineTo(ex, ey); ctx.stroke();
+        ctx.shadowColor = 'rgba(200,225,255,.95)'; ctx.shadowBlur = 34;
+        ctx.strokeStyle = `rgba(235,244,255,${fade})`;
+        ctx.lineWidth = Math.max(2, fs * 0.028) * (0.35 + fade * 0.65);
+        ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(lerp(p1.x, p0.x, p), lerp(p1.y, p0.y, p)); ctx.stroke();
         ctx.restore();
       }
-      // 칼끼리 — 양쪽 아래에서 올라와 가운데서 부딪힌다
-      const cd = a - CL;
-      if (cd > -200 && cd < 700) {
-        const inP = easeIn((cd + 200) / 200);
-        const back = cd > 0 ? easeOut(cd / 500) : 0;
-        const fade = cd > 0 ? 1 - clamp((cd - 150) / 500) : 1;
-        for (const side of [-1, 1]) {
-          const ang = side < 0 ? -0.42 : Math.PI + 0.42;
-          const len = fs * 1.5;
-          const tipX = lerp(clashP.x + side * W * 0.6, clashP.x + side * fs * 0.05, inP) + side * back * fs * 0.25;
-          const tipY = lerp(clashP.y + H * 0.4, clashP.y, inP) + back * fs * 0.1;
-          ctx.save();
-          ctx.translate(tipX, tipY);
-          ctx.rotate(ang + (side < 0 ? 0 : 0));
-          ctx.globalAlpha = fade;
-          const bl = ctx.createLinearGradient(-len, 0, 0, 0);
-          bl.addColorStop(0, 'rgba(120,130,145,0)'); bl.addColorStop(0.6, 'rgba(210,220,232,.9)'); bl.addColorStop(1, 'rgba(255,255,255,1)');
-          ctx.fillStyle = bl;
-          ctx.beginPath();
-          ctx.moveTo(0, 0); ctx.quadraticCurveTo(-len * 0.5, -fs * 0.03, -len, -fs * 0.018); ctx.lineTo(-len, fs * 0.012); ctx.quadraticCurveTo(-len * 0.5, fs * 0.004, 0, 0);
-          ctx.fill();
-          ctx.restore();
+
+      // 총구 화염 — 총구 앞으로 길게 뻗는 불꽃 · 옆으로 터지는 불꽃 · 하얀 심
+      for (const m of muzzles) {
+        const d = a - m.at;
+        if (d >= 0 && d < 110) this.drawMuzzleReal(m.x, m.y, fs * 0.85, m.ang, d, m.seed);
+      }
+      // 화약 연기
+      if (this.smokes && this.puff) {
+        ctx.save();
+        for (const s of this.smokes) {
+          s.age += dt; s.vx *= 1 - dt * 1.4; s.vy = s.vy * (1 - dt * 1.4) - fs * 0.02 * dt;
+          s.x += s.vx * dt + Math.sin(s.age * 1.7 + s.r) * dt * 6; s.y += s.vy * dt; s.r += dt * fs * 0.09;
+          const k = 1 - s.age / s.life;
+          if (k <= 0) continue;
+          const glow = Math.max(0, lit);
+          ctx.globalAlpha = 0.28 * k * (0.55 + glow);
+          ctx.drawImage(this.smokeSprite(), s.x - s.r, s.y - s.r, s.r * 2, s.r * 2);
         }
-        if (cd > 0 && cd < 450) {
-          const k = cd / 450;
-          ctx.strokeStyle = `rgba(255,225,170,${0.7 * (1 - k)})`;
-          ctx.lineWidth = fs * 0.03 * (1 - k);
-          ctx.beginPath(); ctx.arc(clashP.x, clashP.y, fs * 1.8 * easeOut(k), 0, TAU); ctx.stroke();
-        }
+        ctx.restore();
+        this.smokes = this.smokes.filter(s => s.age < s.life);
       }
       // 불꽃
       if (this.sparks && this.sparks.length) {
-        const dt = 1 / 60;
         ctx.save();
         ctx.globalCompositeOperation = 'lighter';
         for (const p of this.sparks) {
@@ -550,9 +545,9 @@
         this.sparks = this.sparks.filter(p => p.age < p.life);
       }
       // DUEL · 금빛 줄
-      const le = easeOut((a - CL - 80) / 600);
+      const le = easeOut((a - CL - 100) / 600);
       if (le > 0) {
-        const y = cy + fs * 0.66;
+        const y = cy + fs * 0.78;
         const halfW = fs * 1.05 * le;
         ctx.fillStyle = `rgba(201,161,94,${0.9 * le})`;
         ctx.fillRect(cx - halfW, y, halfW - fs * 0.34, Math.max(1, fs * 0.012));
@@ -565,6 +560,152 @@
         ctx.fillText('D U E L', cx, y + fs * 0.01);
         ctx.restore();
       }
+    }
+
+    /** 게임 시작 단추 가운데 (화면 좌표). app 이 btnRect 를 넣어 준다 */
+    btnCenter() {
+      const r = this.btnRect && this.btnRect();
+      if (r && r.width) return { x: r.left + r.width / 2, y: r.top + r.height / 2, w: r.width };
+      return { x: this.W / 2, y: this.H * 0.8, w: 260 };
+    }
+
+    /** 단추에 마우스를 올리면 칼이 벌어졌다가 다시 맞부딪힌다 */
+    titleHover(on) {
+      if (this.view !== 'title') return;
+      const h = this._hov || (this._hov = { on: false, at: -1e9, hit: true });
+      if (on && !h.on) { h.at = now(); h.hit = false; }
+      h.on = on;
+    }
+
+    drawTitleSwords(t, cd, fs) {
+      if (cd <= -260) return;
+      const { ctx } = this;
+      const bp = this.btnCenter();
+      const L = Math.max(bp.w * 1.05, fs * 1.3);
+      const inP = easeIn((cd + 260) / 260);
+      const rec = cd > 0 ? Math.exp(-cd / 160) * Math.sin(cd / 45) * 0.08 : 0;
+      // 호버 — 0–130 벌어짐, 130–210 휘둘러 부딪힘, 그 뒤 살짝 떨림
+      const h = this._hov || { on: false, at: -1e9, hit: true };
+      const ha = t - h.at;
+      let swing = 0;
+      if (ha < 130) swing = -0.55 * easeOut(ha / 130);
+      else if (ha < 210) swing = lerp(-0.55, 0.1, easeIn((ha - 130) / 80));
+      else if (ha < 700) swing = 0.1 * Math.exp(-(ha - 210) / 120) * Math.cos((ha - 210) / 40);
+      if (ha >= 205 && !h.hit) {
+        h.hit = true;
+        this.S && this.S.clink();
+        this.shakeIt(140, 5);
+        for (let i = 0; i < 26; i++) {
+          const an = -Math.PI * Math.random();
+          const sp = (0.3 + Math.random()) * fs * 2;
+          this.sparks.push({ x: bp.x, y: bp.y - bp.w * 0.05, vx: Math.cos(an) * sp, vy: Math.sin(an) * sp, age: 0, life: 0.25 + Math.random() * 0.5 });
+        }
+      }
+      const idle = h.on && ha > 700 ? Math.sin(t / 260) * 0.025 : 0;
+      for (const side of [-1, 1]) {
+        // 손잡이는 단추 아래 바깥, 칼끝은 단추 위로 — 가운데서 X
+        const base = side < 0 ? -0.72 : -Math.PI + 0.72;
+        const tilt = (swing + idle + rec) * -side;
+        const ang = lerp(side < 0 ? 0.9 : -Math.PI - 0.9, base, inP) + tilt;
+        const cross = L * 0.42;
+        const hx = bp.x - Math.cos(ang) * cross + side * (1 - inP) * this.W * 0.4;
+        const hy = bp.y + bp.w * 0.05 - Math.sin(ang) * cross + (1 - inP) * this.H * 0.3;
+        this.drawKatana(hx, hy, L, ang, side);
+      }
+      void ctx;
+    }
+
+    smokeSprite() {
+      if (this._smoke) return this._smoke;
+      const c = document.createElement('canvas'); c.width = c.height = 128;
+      const g = c.getContext('2d');
+      const gr = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+      gr.addColorStop(0, 'rgba(190,184,176,.9)'); gr.addColorStop(0.5, 'rgba(160,154,146,.45)'); gr.addColorStop(1, 'rgba(140,134,126,0)');
+      g.fillStyle = gr; g.fillRect(0, 0, 128, 128);
+      return (this._smoke = c);
+    }
+
+    /** 총구 화염. ang 방향으로 쏜다. d: 불붙은 뒤 ms */
+    drawMuzzleReal(x, y, size, ang, d, seed) {
+      const { ctx } = this;
+      const k = 1 - d / 110;
+      const grow = easeOut(d / 25);
+      let s = seed * 9301;
+      const rnd = () => ((s = (s * 16807 + 11) % 2147483647) / 2147483647);
+      ctx.save();
+      ctx.translate(x, y); ctx.rotate(ang);
+      ctx.globalCompositeOperation = 'lighter';
+      // 앞으로 뻗는 원뿔
+      const len = size * (0.9 + 0.5 * grow) * (0.6 + 0.4 * k);
+      const cone = ctx.createLinearGradient(0, 0, len, 0);
+      cone.addColorStop(0, `rgba(255,250,230,${k})`); cone.addColorStop(0.25, `rgba(255,200,90,${0.9 * k})`); cone.addColorStop(0.7, `rgba(255,110,30,${0.5 * k})`); cone.addColorStop(1, 'rgba(160,40,10,0)');
+      ctx.fillStyle = cone;
+      ctx.beginPath();
+      ctx.moveTo(0, -size * 0.05);
+      for (let i = 0; i <= 10; i++) {
+        const tt = i / 10;
+        ctx.lineTo(len * tt, -size * (0.05 + 0.16 * Math.sin(tt * Math.PI)) * (0.7 + rnd() * 0.6));
+      }
+      for (let i = 10; i >= 0; i--) {
+        const tt = i / 10;
+        ctx.lineTo(len * tt, size * (0.05 + 0.16 * Math.sin(tt * Math.PI)) * (0.7 + rnd() * 0.6));
+      }
+      ctx.closePath(); ctx.fill();
+      // 옆으로 터지는 작은 불꽃 네 갈래
+      for (const sgn of [-1, 1]) {
+        for (const f of [0.18, 0.42]) {
+          const px = len * f, sl = size * (0.22 + rnd() * 0.18) * k;
+          const g = ctx.createLinearGradient(px, 0, px + sl * 0.4, sgn * sl);
+          g.addColorStop(0, `rgba(255,220,140,${0.8 * k})`); g.addColorStop(1, 'rgba(255,120,40,0)');
+          ctx.fillStyle = g;
+          ctx.beginPath();
+          ctx.moveTo(px - size * 0.03, 0); ctx.lineTo(px + sl * 0.45, sgn * sl); ctx.lineTo(px + size * 0.06, 0);
+          ctx.closePath(); ctx.fill();
+        }
+      }
+      // 하얀 심과 번짐
+      const core = ctx.createRadialGradient(size * 0.06, 0, 0, size * 0.06, 0, size * 0.45);
+      core.addColorStop(0, `rgba(255,255,255,${k})`); core.addColorStop(0.3, `rgba(255,230,170,${0.7 * k})`); core.addColorStop(1, 'rgba(255,150,60,0)');
+      ctx.fillStyle = core;
+      ctx.beginPath(); ctx.arc(size * 0.06, 0, size * 0.45, 0, TAU); ctx.fill();
+      ctx.restore();
+    }
+
+    /** 칼 — (hx, hy) 는 날밑 자리, ang 은 칼끝 방향, L 은 칼날 길이 */
+    drawKatana(hx, hy, L, ang, side) {
+      const { ctx } = this;
+      ctx.save();
+      ctx.translate(hx, hy); ctx.rotate(ang);
+      const w = L * 0.028;
+      // 칼날 (살짝 휨)
+      const bl = ctx.createLinearGradient(0, -w, 0, w);
+      bl.addColorStop(0, '#f6f9fc'); bl.addColorStop(0.45, '#b9c3cc'); bl.addColorStop(0.55, '#8b959e'); bl.addColorStop(1, '#4c545b');
+      ctx.fillStyle = bl;
+      ctx.beginPath();
+      ctx.moveTo(0, -w * 0.9);
+      ctx.quadraticCurveTo(L * 0.55, -w * 1.9 * side * 0 - w * 2.2, L, -w * 0.4);
+      ctx.lineTo(L * 1.02, 0);
+      ctx.quadraticCurveTo(L * 0.55, -w * 0.6, 0, w * 0.9);
+      ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = Math.max(1, w * 0.15);
+      ctx.beginPath(); ctx.moveTo(w, -w * 0.7); ctx.quadraticCurveTo(L * 0.55, -w * 2.0, L * 0.98, -w * 0.35); ctx.stroke();
+      // 날밑
+      ctx.fillStyle = '#6b5424';
+      ctx.beginPath(); ctx.ellipse(0, 0, w * 0.9, w * 3.2, 0, 0, TAU); ctx.fill();
+      ctx.fillStyle = 'rgba(255,220,150,.35)';
+      ctx.beginPath(); ctx.ellipse(-w * 0.2, -w, w * 0.35, w * 1.4, 0, 0, TAU); ctx.fill();
+      // 손잡이 — 검은 끈을 마름모로 감았다
+      const hl = L * 0.3;
+      ctx.fillStyle = '#16110e';
+      ctx.fillRect(-hl - w, -w * 1.2, hl, w * 2.4);
+      ctx.fillStyle = '#d8ccb2';
+      const n = 7;
+      for (let i = 0; i < n; i++) {
+        const px = -w - hl + (i + 0.5) * hl / n;
+        ctx.beginPath(); ctx.moveTo(px - hl / n * 0.35, 0); ctx.lineTo(px, -w * 0.85); ctx.lineTo(px + hl / n * 0.35, 0); ctx.lineTo(px, w * 0.85); ctx.closePath(); ctx.fill();
+      }
+      ctx.fillStyle = '#8a6a2a'; ctx.fillRect(-hl - w * 1.8, -w * 1.3, w * 0.9, w * 2.6);
+      ctx.restore();
     }
 
     /* ─────────── 모드 고르기 — 왼쪽 StandOff · 오른쪽 一騎討 ─────────── */
@@ -641,8 +782,42 @@
           const shadow = ctx.createRadialGradient(p.cxp, H * 0.97, 0, p.cxp, H * 0.97, mw * 0.6);
           shadow.addColorStop(0, 'rgba(0,0,0,.55)'); shadow.addColorStop(1, 'rgba(0,0,0,0)');
           ctx.fillStyle = shadow; ctx.fillRect(p.cxp - mw, H * 0.9, mw * 2, H * 0.12);
-          ctx.drawImage(p.man, p.cxp - mw / 2, H * 0.99 - mh, mw, mh);
+          const mx = p.cxp - mw / 2, my = H * 0.99 - mh;
+          // 배경 빛을 받은 가장자리 — 서부는 오른쪽 위 햇빛, 사무라이는 왼쪽 위 달빛
+          const rim = this.backlit(p.side === 'west' ? 'mode_west_man' : 'mode_samurai_man');
+          if (rim) {
+            ctx.save();
+            ctx.globalAlpha = 0.28;
+            const rs = p.side === 'west' ? 1 : -1;
+            ctx.filter = p.side === 'west' ? 'none' : 'hue-rotate(180deg) saturate(0.4) brightness(1.4)';
+            ctx.drawImage(rim.rim, mx + rs * mh * 0.004, my - mh * 0.003, mw, mh);
+            ctx.restore();
+          }
+          ctx.drawImage(p.man, mx, my, mw, mh);
         }
+        // 발밑 안개 · 먼지
+        const fog = ctx.createLinearGradient(0, H * 0.7, 0, H);
+        const fc = p.side === 'west' ? '200,160,110' : '190,205,230';
+        fog.addColorStop(0, `rgba(${fc},0)`); fog.addColorStop(0.7, `rgba(${fc},.35)`); fog.addColorStop(1, `rgba(${fc},.5)`);
+        ctx.fillStyle = fog; ctx.fillRect(0, H * 0.7, W, H * 0.3);
+        // 빛 — 서부 햇살, 사무라이는 눈발
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        if (p.side === 'west') {
+          const sun = ctx.createRadialGradient(p.cxp + W * 0.25, -H * 0.1, 0, p.cxp + W * 0.25, -H * 0.1, H * 1.1);
+          sun.addColorStop(0, 'rgba(255,210,140,.35)'); sun.addColorStop(1, 'rgba(255,180,100,0)');
+          ctx.fillStyle = sun; ctx.fillRect(0, 0, W, H);
+          ctx.fillStyle = 'rgba(255,225,180,.5)';
+          for (const mo of this.motes) { ctx.beginPath(); ctx.arc(mo.x * W, mo.y * H, mo.r, 0, TAU); ctx.fill(); }
+        } else {
+          ctx.fillStyle = 'rgba(235,240,255,.7)';
+          for (const mo of this.motes) {
+            const yy = ((mo.y + t / 9000 * (0.6 + mo.v * 40)) % 1) * H;
+            const xx = (mo.x * W + Math.sin(t / 1300 + mo.ph) * 18);
+            ctx.beginPath(); ctx.arc(xx, yy, mo.r * 1.2, 0, TAU); ctx.fill();
+          }
+        }
+        ctx.restore();
         const shade = ctx.createLinearGradient(0, H * 0.45, 0, H);
         shade.addColorStop(0, 'rgba(0,0,0,0)'); shade.addColorStop(1, 'rgba(0,0,0,.75)');
         ctx.fillStyle = shade; ctx.fillRect(0, 0, W, H);
@@ -660,12 +835,29 @@
         const lg = ctx.createLinearGradient(0, H * 0.8 - fsz, 0, H * 0.8);
         lg.addColorStop(0, '#fff3d6'); lg.addColorStop(1, '#d6a860');
         ctx.fillStyle = lg;
-        ctx.font = p.side === 'west' ? `${fsz}px ${FONT_W}` : `900 ${fsz * 1.05}px ${FONT_JP}`;
+        ctx.font = p.side === 'west' ? `${fsz}px Rye, ${FONT_W}` : `${fsz * 1.15}px ${FONT_JP}`;
         ctx.fillText(p.side === 'west' ? 'StandOff' : '一騎討', lx + p.off * 0, H * 0.84);
         ctx.shadowBlur = 0;
-        ctx.font = `700 ${fsz * 0.24}px ${FONT_T}`;
-        ctx.fillStyle = 'rgba(255,240,215,.85)';
-        ctx.fillText(p.side === 'west' ? '스탠드오프 · 총잡이 1–4인' : '일기토 · 사무라이 1:1 · 준비 중', lx, H * 0.84 + fsz * 0.42);
+        if (p.side === 'west') {
+          ctx.font = `${fsz * 0.24}px ${FONT_W}`;
+          ctx.fillStyle = 'rgba(255,236,200,.9)';
+          ctx.fillText('★  DEAD OR ALIVE  ★   총잡이 1–4인', lx, H * 0.84 + fsz * 0.45);
+        } else {
+          ctx.font = `${fsz * 0.42}px "Nanum Brush Script", cursive`;
+          ctx.fillStyle = 'rgba(240,244,255,.92)';
+          ctx.fillText('사무라이 일대일 · 준비 중', lx, H * 0.84 + fsz * 0.55);
+          // 붉은 낙관
+          const sz = fsz * 0.55;
+          const tx = lx - ctx.measureText('사무라이 일대일 · 준비 중').width - sz * 1.2;
+          ctx.save();
+          ctx.translate(tx, H * 0.84 + fsz * 0.2); ctx.rotate(-0.06);
+          ctx.fillStyle = 'rgba(179,38,30,.92)';
+          ctx.fillRect(-sz / 2, -sz / 2, sz, sz);
+          ctx.fillStyle = '#f5e6d8'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.font = `${sz * 0.4}px ${FONT_JP}`;
+          ctx.fillText('準備', 0, -sz * 0.18); ctx.fillText('中', 0, sz * 0.24);
+          ctx.restore();
+        }
         ctx.restore();
       }
       // 가르는 선
@@ -1093,7 +1285,7 @@
       const n = Math.max(2, ids.length);
       const vt = t - (this.versusAt || t);
       if (!this.bolts || this.bolts.n !== n || this.bolts.W !== W || this.bolts.H !== H) this.bolts = makeBolts(n, W, H);
-      const crack = easeOut(vt / 200);
+      const crack = easeOut(vt / 260);
       ctx.fillStyle = '#070504';
       ctx.fillRect(0, 0, W, H);
       const town = this.img.mode_west_bg || this.img.plate;
@@ -1104,7 +1296,7 @@
         const cx0 = W * (i + 0.5) / n;
         const side = cx0 < W / 2 ? -1 : cx0 > W / 2 ? 1 : (i % 2 ? 1 : -1);
         ctx.save();
-        const push = (i - (n - 1) / 2) * 12 * easeOut((vt - 100) / 300);
+        const push = (i - (n - 1) / 2) * 10 * easeOut((vt - 220) / 300);
         ctx.translate(push, 0);
         ctx.beginPath(); poly.forEach(([x, y], k) => (k ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.closePath();
         ctx.clip();
@@ -1195,79 +1387,95 @@
         }
         ctx.restore();
       }
-      // 번개 — 처음엔 떨리며 번쩍이고, 가라앉아 은은히 빛난다
-      const flick = vt < 420 ? (Math.random() < 0.5 ? 1 : 0.45) : 0.75 + 0.25 * Math.sin(t / 90);
+      // 번개 모양으로 가르는 선 — 위에서 아래로 그어지고, 굵고 또렷하게 남는다
       ctx.save();
+      ctx.lineJoin = 'miter'; ctx.lineCap = 'butt';
       for (const b of this.bolts.lines) {
-        const upto = Math.floor((b.length - 1) * crack);
-        const jit = vt < 420 ? W * 0.004 : 0;
-        const path = () => {
-          ctx.beginPath();
-          for (let k = 0; k <= upto; k++) {
-            const x = b[k][0] + (k && k < b.length - 1 ? (Math.random() - 0.5) * jit : 0);
-            k ? ctx.lineTo(x, b[k][1]) : ctx.moveTo(x, b[k][1]);
+        // 그어진 길이만큼
+        const segs = b.length - 1;
+        const upto = crack * segs;
+        const pathTo = () => {
+          ctx.beginPath(); ctx.moveTo(b[0][0], b[0][1]);
+          for (let k = 1; k <= segs; k++) {
+            if (k - 1 >= upto) break;
+            const f = Math.min(1, upto - (k - 1));
+            ctx.lineTo(lerp(b[k - 1][0], b[k][0], f), lerp(b[k - 1][1], b[k][1], f));
           }
         };
-        ctx.globalCompositeOperation = 'lighter';
-        path(); ctx.shadowColor = '#9fd2ff'; ctx.shadowBlur = 40 * flick;
-        ctx.strokeStyle = `rgba(150,200,255,${0.55 * flick})`; ctx.lineWidth = 16; ctx.stroke();
-        path(); ctx.shadowBlur = 12;
-        ctx.strokeStyle = `rgba(220,240,255,${0.95 * flick})`; ctx.lineWidth = 5; ctx.stroke();
-        ctx.shadowBlur = 0; ctx.globalCompositeOperation = 'source-over';
-        path(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
-        // 곁가지
-        if (vt < 500) {
-          ctx.globalCompositeOperation = 'lighter';
-          ctx.strokeStyle = `rgba(200,230,255,${0.6 * flick})`; ctx.lineWidth = 1.5;
-          for (let k = 2; k < b.length - 1 && k <= upto; k += 3) {
-            ctx.beginPath(); ctx.moveTo(b[k][0], b[k][1]);
-            ctx.lineTo(b[k][0] + (k % 2 ? 1 : -1) * W * 0.04, b[k][1] + H * 0.05);
-            ctx.stroke();
-          }
-          ctx.globalCompositeOperation = 'source-over';
-        }
+        pathTo(); ctx.strokeStyle = '#050302'; ctx.lineWidth = Math.max(10, W * 0.009); ctx.stroke();
+        ctx.shadowColor = 'rgba(255,214,140,.9)'; ctx.shadowBlur = 18;
+        pathTo(); ctx.strokeStyle = '#f3d08a'; ctx.lineWidth = Math.max(4, W * 0.0035); ctx.stroke();
+        ctx.shadowBlur = 0;
+        pathTo(); ctx.strokeStyle = '#fff6df'; ctx.lineWidth = Math.max(1.5, W * 0.0012); ctx.stroke();
       }
       ctx.restore();
-      // VS — 크게 떨어져 박히고, 색이 갈라졌다 모인다
-      const vsAt = 460, ve = easeOut((vt - vsAt) / 240);
-      if (ve > 0) {
+      // VS — 선수가 다 들어온 뒤, V 는 왼쪽에서 S 는 오른쪽에서 날아와 가운데서 부딪힌다
+      const vsAt = 180 + (n - 1) * 90 + 520;
+      const fly = easeIn((vt - vsAt) / 220);
+      if (vt > vsAt) {
         const fs = Math.min(W, H) * (n === 2 ? 0.24 : 0.13);
-        const spots = n === 2 ? [[W / 2, H * 0.42]] : this.bolts.lines.map(b => b[Math.floor(b.length * 0.42)]);
-        if (!this._vsHit && vt >= vsAt + 240) {
+        const spots = n === 2 ? [[W / 2, H * 0.42]] : this.bolts.lines.map(b => [lerp(b[1][0], b[2][0], 0.5), H * 0.46]);
+        const hit = vt >= vsAt + 220;
+        if (hit && !this._vsHit) {
           this._vsHit = true;
-          this.shakeIt(260, 14);
-          this.S && this.S.thud(0.8);
-        }
-        if (vt < vsAt) this._vsHit = false;
-        for (const [x, y] of spots) {
-          const sc = lerp(3.2, 1, ve);
-          const split = (1 - clamp((vt - vsAt - 240) / 260)) * fs * 0.06;
-          ctx.save();
-          ctx.translate(x, y); ctx.scale(sc, sc);
-          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-          ctx.font = `${fs}px ${FONT_W}`;
-          ctx.globalAlpha = ve;
-          if (split > 0.5) {
-            ctx.globalCompositeOperation = 'lighter';
-            ctx.fillStyle = 'rgba(255,60,40,.7)'; ctx.fillText('VS', -split, 0);
-            ctx.fillStyle = 'rgba(40,200,255,.7)'; ctx.fillText('VS', split, 0);
-            ctx.globalCompositeOperation = 'source-over';
+          this.shakeIt(280, 16);
+          this.S && this.S.clash();
+          for (const [x, y] of spots) for (let i = 0; i < 26; i++) {
+            const an = Math.random() * TAU, sp = (0.3 + Math.random()) * fs * 4;
+            (this.vsSparks = this.vsSparks || []).push({ x, y, vx: Math.cos(an) * sp, vy: Math.sin(an) * sp, age: 0, life: 0.3 + Math.random() * 0.5 });
           }
-          ctx.lineJoin = 'round';
-          ctx.lineWidth = fs * 0.1; ctx.strokeStyle = '#1c0a04';
-          ctx.strokeText('VS', 0, 0);
+        }
+        if (!hit) this._vsHit = false;
+        const after = hit ? vt - vsAt - 220 : 0;
+        const bump = hit ? Math.exp(-after / 90) * Math.sin(after / 25) * fs * 0.03 : 0;
+        for (const [x, y] of spots) {
+          ctx.save();
+          ctx.translate(x, y);
+          ctx.textBaseline = 'middle';
+          ctx.font = `${fs}px ${FONT_W}`;
+          const vw = ctx.measureText('V').width, sw = ctx.measureText('S').width;
+          const gapIn = fs * 0.02;
+          const vx = lerp(-W * 0.6, -vw - gapIn / 2, fly) - bump;
+          const sx = lerp(W * 0.6, gapIn / 2, fly) + bump;
           const g = ctx.createLinearGradient(0, -fs / 2, 0, fs / 2);
           g.addColorStop(0, '#fff6d8'); g.addColorStop(0.45, '#f0b048'); g.addColorStop(0.55, '#c56a1c'); g.addColorStop(1, '#6b2a08');
-          ctx.fillStyle = g; ctx.fillText('VS', 0, 0);
+          ctx.lineJoin = 'round'; ctx.lineWidth = fs * 0.1; ctx.strokeStyle = '#1c0a04';
+          ctx.textAlign = 'left';
+          for (const [ch, px, dir] of [['V', vx, -1], ['S', sx, 1]]) {
+            if (!hit) {   // 날아오는 잔상
+              ctx.globalAlpha = 0.25;
+              ctx.fillStyle = '#f0b048';
+              ctx.fillText(ch, px + dir * fs * 0.35, 0);
+              ctx.globalAlpha = 1;
+            }
+            ctx.strokeText(ch, px, 0);
+            ctx.fillStyle = g; ctx.fillText(ch, px, 0);
+          }
           ctx.restore();
-          const rk = (vt - vsAt - 240) / 520;
-          if (rk > 0 && rk < 1) {
-            ctx.strokeStyle = `rgba(255,220,160,${0.7 * (1 - rk)})`;
+          if (hit && after < 500) {
+            const rk = after / 500;
+            ctx.strokeStyle = `rgba(255,220,160,${0.75 * (1 - rk)})`;
             ctx.lineWidth = fs * 0.05 * (1 - rk);
-            ctx.beginPath(); ctx.arc(x, y, fs * 2.2 * easeOut(rk), 0, TAU); ctx.stroke();
+            ctx.beginPath(); ctx.arc(x, y, fs * 2 * easeOut(rk), 0, TAU); ctx.stroke();
+            ctx.fillStyle = `rgba(255,240,215,${0.5 * (1 - rk * 3)})`;
+            if (rk < 0.33) ctx.fillRect(0, 0, W, H);
           }
         }
-      }
+        if (this.vsSparks && this.vsSparks.length) {
+          ctx.save();
+          ctx.globalCompositeOperation = 'lighter';
+          for (const p of this.vsSparks) {
+            p.age += 1 / 60; p.vx *= 0.92; p.vy = p.vy * 0.92 + fs * 0.1; p.x += p.vx / 60; p.y += p.vy / 60;
+            const k = 1 - p.age / p.life;
+            if (k <= 0) continue;
+            ctx.strokeStyle = `rgba(255,${Math.round(180 + 70 * k)},${Math.round(100 * k)},${k})`;
+            ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x - p.vx * 0.03, p.y - p.vy * 0.03); ctx.stroke();
+          }
+          ctx.restore();
+          this.vsSparks = this.vsSparks.filter(p => p.age < p.life);
+        }
+      } else { this._vsHit = false; this.vsSparks = []; }
       // 먼지 알갱이 · 가장자리 어둠
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
@@ -1279,7 +1487,7 @@
       const vg = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.35, W / 2, H / 2, Math.max(W, H) * 0.75);
       vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,.6)');
       ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
-      if (vt >= 0 && vt < 150) { ctx.fillStyle = `rgba(235,245,255,${0.95 * (1 - vt / 150)})`; ctx.fillRect(0, 0, W, H); }
+      if (vt >= 0 && vt < 90) { ctx.fillStyle = `rgba(255,245,225,${0.6 * (1 - vt / 90)})`; ctx.fillRect(0, 0, W, H); }
     }
 
     /* ─────────── 결투장 ─────────── */
@@ -1734,17 +1942,9 @@
     const lines = [];
     for (let i = 1; i < n; i++) {
       const x = W * i / n;
-      const pts = [];
-      const segs = 9;
-      let seed = i * 97 + n * 13;
-      const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
-      for (let k = 0; k <= segs; k++) {
-        const y = H * k / segs;
-        const skew = (0.5 - k / segs) * W * 0.12;
-        const jag = k === 0 || k === segs ? 0 : (k % 2 ? 1 : -1) * W * (0.02 + rnd() * 0.035);
-        pts.push([x + skew + jag, y]);
-      }
-      lines.push(pts);
+      const d = W * Math.min(0.06, 0.12 / n);
+      // 위에서 비스듬히 내려오다 → 옆으로 꺾고 → 다시 내려오다 → 한 번 더 꺾여 아래로 (꺾임 셋)
+      lines.push([[x + d, 0], [x - d * 0.35, H * 0.4], [x + d * 0.55, H * 0.52], [x - d * 0.2, H * 0.66], [x - d, H]]);
     }
     return { n, W, H, lines };
   }

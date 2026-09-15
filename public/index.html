@@ -8,8 +8,8 @@
 <meta name="theme-color" content="#1a120c">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Hahmlet:wght@700;900&family=Nanum+Pen+Script&display=swap">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@900&text=%E4%B8%80%E9%A8%8E%E8%A8%8E&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Rye&family=Hahmlet:wght@700;900&family=Nanum+Pen+Script&family=Nanum+Brush+Script&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@900&family=Yuji+Syuku&text=%E4%B8%80%E9%A8%8E%E8%A8%8E%E6%BA%96%E5%82%99%E4%B8%AD&display=swap">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <link rel="stylesheet" href="/style.css">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤠</text></svg>">
@@ -32,18 +32,20 @@
   <button class="btn primary big" id="startGameBtn">게임 시작</button>
 </section>
 
-<!-- 처음 -->
+<!-- 처음 — 현상수배서 한 장 -->
 <section id="home" class="view">
   <div class="poster">
+    <p class="orn">DEAD OR ALIVE</p>
     <h2>결투</h2>
-    <p class="how">멀리 선 상대를 노려보다가 <b>지금!</b> 이 뜨면 클릭. 먼저 쏜 사람이 이긴다. 그 전에 쏘면 오발.</p>
-    <input id="nameIn" maxlength="10" placeholder="이름" autocomplete="off">
+    <p class="sub">STANDOFF</p>
+    <p class="how">멀리 선 상대를 노려보다 <b>지금!</b>이 뜨면 쏜다.<br>먼저 쏜 자가 산다. 그 전에 쏘면 오발.</p>
+    <label class="field"><span>NAME</span><input id="nameIn" maxlength="10" placeholder="이름" autocomplete="off"></label>
     <button class="btn primary" id="createBtn">방 만들기</button>
     <div class="row">
-      <input id="codeIn" maxlength="4" placeholder="방 코드" autocomplete="off" autocapitalize="characters">
+      <label class="field"><span>No.</span><input id="codeIn" maxlength="4" placeholder="방 코드" autocomplete="off" autocapitalize="characters"></label>
       <button class="btn" id="joinBtn">들어가기</button>
     </div>
-    <hr>
+    <p class="rule"><span>OR</span></p>
     <div class="row">
       <button class="btn" id="soloBtn">봇이랑 연습</button>
       <button class="btn" id="pairBtn">한 기기 둘이</button>
@@ -53,6 +55,18 @@
       <label>실력 <select id="botLv"><option value="easy">쉬움</option><option value="normal" selected>보통</option><option value="hard">어려움</option></select></label>
     </div>
     <p class="err" id="homeErr"></p>
+    <p class="banner">REPORT TO THE SHERIFF</p>
+  </div>
+</section>
+
+<!-- 일기토 — 아직 준비 중. 수묵 느낌 미리보기 -->
+<section id="soon" class="view ink">
+  <div class="scroll">
+    <h2 class="brush">一騎討</h2>
+    <p class="vert">칼을 가는 중</p>
+    <p class="brush-sub">사무라이 일대일 결투는 곧 열립니다</p>
+    <span class="seal">準備中</span>
+    <button class="btn inkbtn" id="soonBack">돌아가기</button>
   </div>
 </section>
 
