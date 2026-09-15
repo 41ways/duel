@@ -243,7 +243,7 @@
         toast(m.msg);
         (document.body.dataset.view === 'lobby' ? $('#lobbyErr') : $('#homeErr')).textContent = m.msg;
         break;
-      case 'left': forget(); toHome(); break;
+      case 'left': if (document.body.dataset.view === 'home') wsSend({ t: 'rooms' }); else { forget(); toHome(); } break;
     }
   }
 
@@ -331,7 +331,10 @@
   });
 
   // 열린 방 — 처음 화면에 있는 동안 서버가 바뀔 때마다 보내 준다
-  function watchRooms() { connect(() => wsSend({ t: 'rooms' })); }
+  function watchRooms() {
+    // 방에 붙어 있는 채로 처음 화면에 왔다면(새로고침 뒤 자동 복귀 등) 먼저 나와야 목록을 받는다
+    connect(() => { if (N) { wsSend({ t: 'leave' }); forget(); } wsSend({ t: 'rooms' }); });
+  }
   function renderRooms(m) {
     $('#online').textContent = `지금 ${m.online}명 접속`;
     $('#roomEmpty').hidden = m.list.length > 0;

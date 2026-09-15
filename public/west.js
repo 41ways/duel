@@ -799,9 +799,10 @@
 
     /** 처음 화면에서 되돌아가기 — 서부 쪽이 다시 반으로 줄어든다 */
     backToSelect() {
+      // 서부 쪽에서는 회전초가 화면을 통째로 닦고 고르기 화면을 처음처럼 다시 띄운다 (사무라이는 따로 연출 예정)
       this.clearTimers();
-      this.sel = { hover: null, split: 1.2, pick: null, pickAt: 0, from: 1.2, at: now() - 2000 };
-      this.view = 'select';
+      this.sel = { hover: null, split: 0.5, pick: null, pickAt: 0, from: 0.5, at: now() + 350 };
+      this.startWipe('select');
     }
 
     selectSide(x) { const s = this.sel; return x < (s ? s.split : 0.5) * this.W ? 'west' : 'samurai'; }
@@ -1269,7 +1270,7 @@
         const from = { k: s0, x: W * 0.6 - man.width * s0 / 2, y: H * 0.99 - man.height * s0 };
         let to = from;
         if (fr) { const k = fr.h / 150; to = { k, x: fr.x + fr.w / 2 - 165 * k, y: fr.y + fr.h / 2 - 72 * k }; }
-        const e = this.homeFrom === 0.6 ? easeIO(a / 950) : 1;
+        const e = this.homeFrom === 0.6 ? easeIO(a / 800) : 1;   // 사람이 먼저 자리를 잡는다(수배서는 0.75초 뒤에 올라옴)
         const k = lerp(from.k, to.k, e), mx = lerp(from.x, to.x, e), my = lerp(from.y, to.y, e);
         ctx.drawImage(man, mx, my + Math.sin(t / 1400) * 1.2, man.width * k, man.height * k);
       }
