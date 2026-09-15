@@ -1217,6 +1217,19 @@
       ctx.drawImage(poster, 0, 0, pw, ph);
       ctx.restore();
       this.posterFace(k, { pic: this.photo(q.char % 4), name: q.name });
+      // 한 기기에서 같이 할 때 — 사진 바로 아래에 이 자리의 키
+      if (q.key) {
+        ctx.save();
+        ctx.font = `${34 * k}px ${FONT_W}`;
+        const tw = ctx.measureText(q.key).width + 40 * k, th = 54 * k;
+        const kx = 288 * k - tw / 2, ky = 470 * k - th / 2;
+        ctx.fillStyle = '#f3e1b8'; ctx.strokeStyle = '#2a170c'; ctx.lineWidth = 3 * k;
+        ctx.beginPath(); ctx.roundRect ? ctx.roundRect(kx, ky, tw, th, 8 * k) : ctx.rect(kx, ky, tw, th); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#2a170c'; ctx.fillRect(kx + 3 * k, ky + th - 9 * k, tw - 6 * k, 6 * k);
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(q.key, 288 * k, ky + th / 2 - 3 * k);
+        ctx.restore();
+      }
       // 도장 — 나 · 봇 · 방장
       const stamps = [];
       if (q.me) stamps.push('나');

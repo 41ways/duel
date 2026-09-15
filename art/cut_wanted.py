@@ -92,8 +92,8 @@ HX, HY, HW, HH = 128, 150, 320, 240
 holed = cv2.imread(os.path.join(OUT, 'poster_blank.png'), cv2.IMREAD_UNCHANGED)
 # 액자: 바깥 굵은 줄 + 안쪽 가는 줄 (종이 위에 인쇄된 틀)
 ink = (26, 38, 52)                                      # BGR — 바랜 먹색
-cv2.rectangle(holed, (HX - 14, HY - 14), (HX + HW + 13, HY + HH + 13), (*ink, 255), 5, cv2.LINE_AA)
-cv2.rectangle(holed, (HX - 6, HY - 6), (HX + HW + 5, HY + HH + 5), (*ink, 255), 2, cv2.LINE_AA)
+cv2.rectangle(holed, (HX - 9, HY - 9), (HX + HW + 8, HY + HH + 8), (*ink, 255), 2, cv2.LINE_AA)
+cv2.rectangle(holed, (HX - 4, HY - 4), (HX + HW + 3, HY + HH + 3), (*ink, 255), 1, cv2.LINE_AA)
 # 구멍은 반듯한 직사각형
 holed[HY:HY + HH, HX:HX + HW, 3] = 0
 cv2.imwrite(os.path.join(OUT, 'poster_hole.png'), holed)

@@ -85,6 +85,23 @@ async function check(name, fn) {
     for (const w of [c, d]) { tx(w, { t: 'leave' }); w.close(); }
   });
 
+  await check('한 기기에서 같이 — 자리 추가 · 대신 쏘기', async () => {
+    const c = await open();
+    tx(c, { t: 'create', name: '주인' });
+    await waitFor(c, m => m.t === 'joined');
+    tx(c, { t: 'addLocal' });
+    const st = await waitFor(c, m => m.t === 'state' && m.players.length === 2);
+    const seat = st.players.find(p => p.local);
+    assert.ok(seat && seat.owner === st.meId, '같은 기기 자리');
+    tx(c, { t: 'start' });
+    const sig = await waitFor(c, m => m.t === 'ev' && m.ev.k === 'signal', 20000, 'signal');
+    tx(c, { t: 'shoot', r: sig.ev.r, ms: 180, pid: seat.id });
+    tx(c, { t: 'shoot', r: sig.ev.r, ms: 300 });
+    const res = await waitFor(c, m => m.t === 'ev' && m.ev.k === 'result', 5000, 'result');
+    assert.deepStrictEqual(res.ev.win, [seat.id]);
+    tx(c, { t: 'leave' }); c.close();
+  });
+
   await check('신호 → 쏘기 → 판정', async () => {
     const sig = await waitFor(a, m => m.t === 'ev' && m.ev.k === 'signal', 20000, 'signal');
     tx(a, { t: 'shoot', r: sig.ev.r, ms: 150 });

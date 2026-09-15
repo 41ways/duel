@@ -51,7 +51,6 @@
       <label class="field"><span>No.</span><input id="codeIn" maxlength="4" placeholder="방 코드" autocomplete="off" autocapitalize="characters"></label>
       <button class="btn" id="joinBtn">들어가기</button>
     </div>
-    <button class="link" id="pairBtn">☞ 한 기기로 둘이 하기 <small>한 화면을 반으로 — 왼쪽 사람은 왼쪽을, 오른쪽 사람은 오른쪽을 클릭</small></button>
     <p class="err" id="homeErr"></p>
   </div>
 </section>
@@ -77,6 +76,14 @@
       <label><span>판 수</span><select data-cfg="target"><option value="1">단판</option><option value="3">3선승</option><option value="5">5선승</option></select></label>
       <label><span>신호</span><select data-cfg="signal"><option value="mix">화면에 "지금!"</option><option value="sound">소리만</option></select></label>
       <label><span>거짓 신호</span><select data-cfg="decoys"><option value="true">포함</option><option value="false">없음</option></select></label>
+    </div>
+    <div class="together">
+      <button class="btn" id="addLocalBtn">+ 이 기기에서 같이 하기</button>
+      <ul class="keys-note">
+        <li><span>둘이</span><kbd>SPACE</kbd><kbd>ENTER</kbd></li>
+        <li><span>셋이</span><kbd>A</kbd><kbd>SPACE</kbd><kbd>ENTER</kbd></li>
+        <li><span>넷이</span><kbd>A</kbd><kbd>SPACE</kbd><kbd>ENTER</kbd><kbd>좌클릭</kbd></li>
+      </ul>
     </div>
     <p class="rules-note" id="rulesNote"></p>
     <span class="err" id="lobbyErr"></span>
@@ -109,7 +116,6 @@
   </div>
 </section>
 
-<div id="pairHint"><span>◀ 왼쪽 사람 · 화면 왼쪽을 클릭</span><span>화면 오른쪽을 클릭 · 오른쪽 사람 ▶</span></div>
 <div id="toast"></div>
 
 <script src="/duel.js"></script>

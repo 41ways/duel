@@ -145,7 +145,17 @@
     $('#overWait').textContent = net && !host ? '방장이 다음 판을 고르는 중…' : '';
   }
 
-  /* ─────────────────────── 입력 — 마우스만 ─────────────────────── */
+  /* ─────────────────────── 입력 ─────────────────────── */
+
+  // 한 기기에서 같이 할 때 자리별 키. 혼자면 마우스(아무 데나 클릭)
+  const KEYSETS = { 2: ['Space', 'Enter'], 3: ['KeyA', 'Space', 'Enter'], 4: ['KeyA', 'Space', 'Enter', 'Mouse'] };
+  const KEY_LABEL = { Space: 'SPACE', Enter: 'ENTER', KeyA: 'A', Mouse: '좌클릭' };
+  /** 이 기기에서 조작하는 자리들(나 먼저, 들어온 순서) → [{id, key}] */
+  function mySeats(players, meId) {
+    const seats = players.filter(p => p.id === meId || (p.local && p.owner === meId));
+    const keys = KEYSETS[seats.length];
+    return seats.map((p, i) => ({ id: p.id, key: keys ? keys[i] : 'Mouse' }));
+  }
 
   function fire(pid) {
     if (!G || !G.mine.has(pid) || G.locked.has(pid)) return;
@@ -166,7 +176,7 @@
   }
 
   function send(pid, a) {
-    if (G.kind === 'net') wsSend({ t: 'shoot', ...a });
+    if (G.kind === 'net') wsSend({ t: 'shoot', pid, ...a });
     else G.duel.input(pid, a);
   }
 
@@ -174,8 +184,16 @@
     if (!G) return;
     e.preventDefault();
     S.unlock();
-    if (G.kind === 'pair') fire(e.clientX < innerWidth / 2 ? G.players[0].id : G.players[1].id);
-    else fire([...G.mine][0]);
+    if (G.keys) { if (e.button === 0 && G.keys.has('Mouse')) fire(G.keys.get('Mouse')); return; }
+    fire([...G.mine][0]);
+  });
+  addEventListener('keydown', e => {
+    if (!G || !G.keys || document.body.dataset.view !== 'game' || e.repeat) return;
+    const pid = G.keys.get(e.code);
+    if (pid == null) return;
+    e.preventDefault();
+    S.unlock();
+    fire(pid);
   });
   $('#stage').addEventListener('contextmenu', e => e.preventDefault());
 
@@ -258,7 +276,9 @@
     N = s;
     if (s.phase === 'lobby') {
       if (G) { G = null; clearTimeout(overT); }
-      west.board(s.players.map((p, i) => ({ id: p.id, name: p.name, char: i % CHARS.length, me: p.id === s.meId, host: p.id === s.hostId, bot: p.bot })));
+      const seats = mySeats(s.players, s.meId);
+      const keyOf = new Map(seats.length > 1 ? seats.map(x => [x.id, KEY_LABEL[x.key]]) : []);
+      west.board(s.players.map((p, i) => ({ id: p.id, name: p.name, char: i % CHARS.length, me: p.id === s.meId, host: p.id === s.hostId, bot: p.bot, key: keyOf.get(p.id) || null })));
       renderLobby();
       view('lobby');
       return;
@@ -267,7 +287,9 @@
     if (!d) return;
     const fresh = !G || G.kind !== 'net' || (prev && prev.phase !== 'playing' && s.phase === 'playing');
     if (fresh) {
-      enterGame({ kind: 'net', cfg: d.cfg, players: d.players, mine: [s.meId], foreId: s.meId, duel: null });
+      const seats = mySeats(s.players, s.meId);
+      enterGame({ kind: 'net', cfg: d.cfg, players: d.players, mine: seats.map(x => x.id), foreId: s.meId, duel: null });
+      G.keys = seats.length > 1 ? new Map(seats.map(x => [x.key, x.id])) : null;
       if (d.r > 0) { G.phase = 'result'; G.r = d.r; }       // 판 도중에 붙었다 — 다음 라운드부터
       if (s.phase === 'over') showOver({ winnerId: s.winnerId, scores: d.scores });
     }
@@ -294,15 +316,23 @@
     const p = hit.id != null ? s.players.find(x => x.id === hit.id) : null;
     let title, items;
     if (!p) {
-      if (s.players.length >= R.MAX_PLAYERS.west) return;
+      if (s.hostId !== s.meId || s.players.length >= R.MAX_PLAYERS.west) return;
       title = '봇 앉히기';
       items = Object.entries(LV).map(([lv, ko]) => [`${ko}`, () => wsSend({ t: 'addBot', level: lv })]);
     } else {
       if (p.id === s.meId) return;
       title = p.name;
       items = [];
-      if (!p.bot) items.push(['방장 넘기기', () => wsSend({ t: 'host', id: p.id })]);
-      items.push([p.bot ? '봇 빼기' : '내보내기', () => wsSend({ t: 'kick', id: p.id })]);
+      if (p.local) {
+        if (p.owner !== s.meId && s.hostId !== s.meId) return;
+        items.push(['자리 빼기', () => wsSend({ t: 'removeLocal', id: p.id })]);
+        $('#smTitle').textContent = title;
+      }
+      if (!p.local) {
+        if (s.hostId !== s.meId) return;
+        if (!p.bot) items.push(['방장 넘기기', () => wsSend({ t: 'host', id: p.id })]);
+        items.push([p.bot ? '봇 빼기' : '내보내기', () => wsSend({ t: 'kick', id: p.id })]);
+      }
     }
     $('#smTitle').textContent = title;
     $('#smBody').innerHTML = '';
@@ -321,7 +351,7 @@
   }
   function closeSlotMenu() { $('#slotMenu').classList.remove('open'); }
   $('#scene').addEventListener('click', e => {
-    if (document.body.dataset.view !== 'lobby' || !N || N.hostId !== N.meId) return;
+    if (document.body.dataset.view !== 'lobby' || !N) return;
     const hit = west.slotAt(e.clientX, e.clientY);
     const menu = $('#slotMenu');
     if (!hit) return closeSlotMenu();
@@ -412,8 +442,8 @@
   };
   $('#joinBtn').addEventListener('click', join);
   $('#codeIn').addEventListener('keydown', e => { if (e.key === 'Enter') join(); });
-  $('#pairBtn').addEventListener('click', () => startLocal('pair'));
 
+  $('#addLocalBtn').addEventListener('click', () => { S.unlock(); wsSend({ t: 'addLocal' }); });
   $('#copyBtn').addEventListener('click', async () => {
     const url = `${location.origin}/?room=${N.code}`;
     try { await navigator.clipboard.writeText(url); toast('초대 링크를 복사했어요.'); } catch (_) { toast(url, 5000); }
