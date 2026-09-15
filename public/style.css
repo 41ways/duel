@@ -13,7 +13,8 @@ button, input, select { font: inherit; color: inherit; }
 body[data-view="game"] #stage { display: block; }
 body[data-view="select"] #scene { cursor: pointer; }
 
-.top { position: fixed; top: 0; left: 0; right: 0; z-index: 5; display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; }
+.top { position: fixed; top: 0; left: 0; right: 0; z-index: 5; display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; pointer-events: none; }
+.top > * { pointer-events: auto; }   /* 위 막대가 아래 화면의 단추(방식 다시 고르기)를 가리지 않게 */
 .brand { color: #fff8; text-decoration: none; font: 13px var(--slab); letter-spacing: .08em; }
 .icon { width: 36px; height: 36px; border: 1px solid #e2c48c55; border-radius: 50%; background: #1a100acc; color: var(--paper); cursor: pointer; }
 #quitBtn { display: none; }
@@ -69,7 +70,7 @@ body[data-view="title"] #title, body[data-view="home"] #home, body[data-view="ov
 .link:hover { opacity: 1; text-decoration: underline; }
 
 /* ───────── 처음 — 빈 수배서 한 장 ───────── */
-#home { align-items: flex-start; justify-content: safe center; padding-left: max(16px, 6vw); }
+#home { flex-direction: row; align-items: center; justify-content: flex-start; gap: 26px; padding-left: max(16px, 5vw); }
 .sheet {
   --w: clamp(300px, min(420px, 46vw, calc((100vh - 110px) * .773)), 420px);
   width: var(--w); min-height: calc(var(--w) * 1.293);
@@ -95,6 +96,25 @@ body[data-view="title"] #title, body[data-view="home"] #home, body[data-view="ov
 .err { margin: 0; color: var(--red); font-weight: 800; font-size: 13px; min-height: 1em; }
 small { font-size: 12px; opacity: .7; font-weight: 700; }
 @keyframes pin { from { opacity: 0; transform: translateY(-30px) rotate(-3deg); } }
+
+/* 열린 방 — 수배서 옆에 붙은 쪽지 */
+.roomboard {
+  width: 300px; align-self: center; color: var(--ink);
+  border: 28px solid transparent; border-image: url(/img/paper_panel.png) 70 fill / 28px stretch;
+  transform: rotate(1.2deg); animation: pin .5s .12s cubic-bezier(.2,1.4,.4,1) both;
+}
+.rb-kicker { margin: 0; font: 12px var(--slab); letter-spacing: .25em; text-align: center; }
+.roomboard h3 { margin: 2px 0 8px; padding-bottom: 8px; border-bottom: 3px double var(--ink); font: 900 24px var(--kr); text-align: center; }
+.roomboard h3 small { display: block; font: 700 12px var(--kr); opacity: .7; }
+#roomList { list-style: none; margin: 0; padding: 0; max-height: 44vh; overflow-y: auto; }
+#roomList li { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; padding: 9px 4px; border-bottom: 1px dashed var(--ink-soft); cursor: pointer; }
+#roomList li:hover { background: #3b241418; }
+#roomList li b { font: 900 16px var(--kr); }
+#roomList li .n { font: 18px var(--wood); color: var(--red); text-align: right; }
+#roomList li small { grid-column: 1 / -1; font-weight: 700; opacity: .7; }
+#roomList li.playing { cursor: default; opacity: .55; }
+#roomList li.playing:hover { background: none; }
+.rb-empty { margin: 10px 0 0; text-align: center; font-weight: 700; font-size: 13px; opacity: .7; }
 
 /* ───────── 대기방 — 왼쪽 방 설정 · 오른쪽 위 수배서 · 아래 채팅 ───────── */
 #lobby {
@@ -202,7 +222,8 @@ body[data-view="lobby"] #lobby { display: grid; }
 @keyframes unroll { from { clip-path: inset(0 0 100% 0); } to { clip-path: inset(0 0 0 0); } }
 
 @media (max-width: 700px) {
-  #home { align-items: center; padding-left: 16px; }
+  #home { flex-direction: column; align-items: center; padding-left: 16px; overflow-y: auto; justify-content: flex-start; }
+  .roomboard { width: min(380px, 92vw); transform: none; }
   .sheet { --w: min(380px, 92vw); }
   .result { border-width: 24px; }
   .brush { font-size: 84px; }

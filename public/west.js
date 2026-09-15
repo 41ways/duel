@@ -77,7 +77,7 @@
       names.forEach((n, i) => { this.img[n.replace(/\.\w+$/, '')] = imgs[i]; });
       this.sil = CHARS.map((c, i) => this.silhouette(this.img[c.key], i));
       this.puff = this.makePuff();
-      try { await Promise.all([document.fonts.load(`900 40px ${FONT_T}`), document.fonts.load(`40px ${FONT_W}`), document.fonts.load(`40px ${FONT_H}`), document.fonts.load(`40px ${FONT_JP}`, '一騎討準備中'), document.fonts.load('40px Rye'), document.fonts.load('40px "Nanum Brush Script"')]); } catch (_) {}
+      try { await Promise.all([document.fonts.load(`900 40px ${FONT_T}`), document.fonts.load(`40px ${FONT_W}`), document.fonts.load(`40px ${FONT_H}`), document.fonts.load(`40px ${FONT_JP}`, '一騎討準備中'), document.fonts.load('40px Rye'), document.fonts.load('40px "Song Myung"', '결투'), document.fonts.load('40px "Nanum Brush Script"')]); } catch (_) {}
     }
 
     /** 판초가 아닌 사람이 앞에 설 때 — 역광에 뭉개진 어깨 너머 실루엣 */
@@ -457,7 +457,7 @@
       // 글자 — 칼 전엔 총구 불빛에만 비치고, 벤 뒤엔 칼자국을 따라 엇갈린다
       ctx.save();
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.font = this.titleFont ? this.titleFont(fs) : `900 ${fs}px ${FONT_T}`;
+      ctx.font = this.titleFont ? this.titleFont(fs) : `${fs}px "Song Myung", ${FONT_T}`;   // 제목 서체: 송명(시안 3)
       const w0 = ctx.measureText('결').width, w1 = ctx.measureText('투').width;
       const gap = fs * 0.06;
       const x0 = cx - (w0 + w1 + gap) / 2 + w0 / 2;
@@ -1260,7 +1260,7 @@
       const bw = bg.width * bs, bh = bg.height * bs;
       ctx.drawImage(bg, (W - bw) / 2 + W * 0.05 + Math.sin(t / 9000) * 8, (H - bh) / 2, bw, bh);
       const narrow = W < 760;
-      const mxN = lerp(this.homeFrom || 0.72, narrow ? 0.5 : 0.7, easeIO(a / 800));
+      const mxN = lerp(this.homeFrom || 0.72, narrow ? 0.5 : 0.8, easeIO(a / 800));
       if (man) {
         const mh = H * (narrow ? 0.7 : 0.9);
         const mw = man.width * mh / man.height;

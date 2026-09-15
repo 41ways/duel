@@ -39,6 +39,7 @@
     S.wind(true);
     west.westHome();
     view('home');
+    watchRooms();
   }
 
   /** players: [{id, name, bot}] — 자리 순서가 곧 캐릭터 */
@@ -210,6 +211,7 @@
         history.replaceState(null, '', `?room=${m.code}`);
         break;
       case 'state': onState(m); break;
+      case 'rooms': renderRooms(m); break;
       case 'chat': addChat(m); break;
       case 'ev': if (G && G.kind === 'net') onEv(m.ev); break;
       case 'err':
@@ -304,6 +306,25 @@
     $('#scene').style.cursor = hit && (hit.id == null || hit.id !== N.meId) ? 'pointer' : '';
   });
 
+  // 열린 방 — 처음 화면에 있는 동안 서버가 바뀔 때마다 보내 준다
+  function watchRooms() { connect(() => wsSend({ t: 'rooms' })); }
+  function renderRooms(m) {
+    $('#online').textContent = `지금 ${m.online}명 접속`;
+    $('#roomEmpty').hidden = m.list.length > 0;
+    $('#roomList').innerHTML = m.list.map(r => `
+      <li data-code="${r.code}" class="${r.phase === 'lobby' ? '' : 'playing'}">
+        <b>${esc(r.host)}의 방</b><span class="n">${r.n}/${r.max}</span>
+        <small>${r.phase === 'lobby' ? (r.n >= r.max ? '꽉 참' : '기다리는 중 · 눌러서 들어가기') : '결투 중'} · ${r.target === 1 ? '단판' : r.target + '선승'}</small>
+      </li>`).join('');
+  }
+  $('#roomList').addEventListener('click', e => {
+    const li = e.target.closest('li[data-code]');
+    if (!li || li.classList.contains('playing')) return;
+    S.unlock();
+    local.set('duel.name', myName());
+    connect(() => wsSend({ t: 'join', code: li.dataset.code, name: myName() }));
+  });
+
   // 채팅
   function addChat(m) {
     const li = document.createElement('li');
@@ -341,7 +362,7 @@
     if (document.body.dataset.view !== 'select') return;
     S.unlock();
     west.selectPick(e.clientX, side => {
-      if (side === 'west') { west.westHome(); view('home'); }
+      if (side === 'west') { west.westHome(); view('home'); watchRooms(); }
       else view('soon');
     });
   });
