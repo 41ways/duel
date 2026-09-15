@@ -23,6 +23,9 @@ body[data-view="game"] #quitBtn, body[data-view="lobby"] #quitBtn, body[data-vie
 .view { position: fixed; inset: 0; z-index: 3; display: none; padding: 60px 16px 24px; align-items: center; justify-content: flex-end; flex-direction: column; overflow-y: auto; }
 body[data-view="title"] #title, body[data-view="home"] #home, body[data-view="over"] #over, body[data-view="soon"] #soon { display: flex; }
 #title { padding-bottom: 17vh; }
+/* 회전초가 지나가는 동안 떠나는 화면은 왼쪽에 남는다 */
+.view.leaving { display: flex; pointer-events: none; }
+#lobby.leaving { display: grid; }
 #startGameBtn { opacity: 0; transition: opacity .6s, transform .15s; }
 .ready #startGameBtn { opacity: 1; }
 
@@ -70,12 +73,11 @@ body[data-view="title"] #title, body[data-view="home"] #home, body[data-view="ov
 .link:hover { opacity: 1; text-decoration: underline; }
 
 /* ───────── 처음 — 마을 게시판 · 구멍 뚫린 수배서 ───────── */
-#home { flex-direction: row; align-items: center; justify-content: space-between; gap: 24px; padding: 60px max(16px, 6vw) 24px max(16px, 4vw); }
+#home { flex-direction: row; align-items: center; justify-content: space-between; gap: 24px; padding: 60px max(16px, 6vw) 24px max(16px, 4vw); overflow: hidden; }
 .sheet {
   --w: clamp(300px, min(400px, 34vw, calc((100vh - 110px) * .773)), 400px);
   position: relative; width: var(--w); min-height: calc(var(--w) * 1.293); flex: none;
   background: url(/img/poster_blank.png) center / 100% 100% no-repeat;
-  filter: drop-shadow(0 22px 40px #000c);
   padding: calc(var(--w) * .25) calc(var(--w) * .13) calc(var(--w) * .09);
   display: flex; flex-direction: column; justify-content: center; gap: 12px; text-align: center;
 }
@@ -83,17 +85,21 @@ body[data-view="title"] #title, body[data-view="home"] #home, body[data-view="ov
 .sheet.holed {
   background-image: url(/img/poster_hole.png);
   padding-top: calc(var(--w) * .72); justify-content: flex-start; gap: 10px;
-  animation: slideSheet 1.1s cubic-bezier(.25,.8,.25,1) both;
+  animation: slideSheet 1s cubic-bezier(.3,.75,.25,1) both;
+  will-change: transform;
 }
+/* 그림자 필터는 움직이는 동안 매 프레임 다시 그려 끊긴다 — 발밑에 흐린 타원 하나로 대신한다 */
+.sheet::before, .townboard::before { content: ""; position: absolute; left: 6%; right: 6%; bottom: -3%; height: 8%; background: radial-gradient(ellipse at center, #000a, #0000 70%); z-index: -1; }
 .hole { position: absolute; left: 22.2%; top: 20.1%; width: 55.6%; height: 32.2%; pointer-events: none; }
-@keyframes slideSheet { from { transform: translateX(-60vw) rotate(-4deg); } 70% { transform: translateX(8px) rotate(.6deg); } to { transform: none; } }
+@keyframes slideSheet { from { transform: translateX(-62vw) rotate(-3deg); } 80% { transform: translateX(6px) rotate(.4deg); } to { transform: none; } }
 
 .townboard {
-  position: relative; flex: 0 1 auto; width: min(640px, 48vw); aspect-ratio: 795 / 647;
+  position: relative; flex: 0 1 auto; width: min(640px, 46vw, calc((100vh - 110px) * 1.229)); aspect-ratio: 795 / 647;
   background: url(/img/board.png) center / 100% 100% no-repeat;
-  filter: drop-shadow(0 20px 30px #000a);
-  animation: rise .7s .5s cubic-bezier(.2,.8,.2,1) both;
+  animation: boardIn .9s .45s cubic-bezier(.3,.75,.25,1) both;
+  will-change: transform;
 }
+@keyframes boardIn { from { transform: translateX(-70vw) rotate(2deg); } 80% { transform: translateX(-6px) rotate(-.3deg); } to { transform: none; } }
 .tb-in { position: absolute; left: 13%; top: 11%; width: 69%; height: 45%; display: flex; flex-direction: column; gap: 6px; }
 .tb-head { margin: 0; font: 900 clamp(16px, 1.8vw, 24px)/1.1 var(--kr); color: #f1dfbf; text-shadow: 0 2px 0 #1a0f07, 0 0 10px #000a; }
 .tb-head small { font: 700 12px var(--kr); opacity: .8; margin-left: 8px; }

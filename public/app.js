@@ -19,11 +19,35 @@
 
   const west = new window.West($('#scene'), S);
   window.__west = west;   // 콘솔에서 연출 확인용
+  west.onWipe = c => wipeClip(c);
   let G = null;      // 지금 하는 판
   let N = null;      // 서버 방 상태
   let overT = null;
 
-  const view = v => { document.body.dataset.view = v; };
+  // 화면 전환. 캔버스가 회전초로 닦는 중이면 DOM 창도 회전초 뒤에서 바뀌게 한다
+  const VIEW_EL = { title: 'title', home: 'home', lobby: 'lobby', over: 'over', soon: 'soon' };
+  let leavingEl = null;
+  const view = v => {
+    const prev = document.body.dataset.view;
+    document.body.dataset.view = v;
+    const w = window.__west;
+    if (w && w.wipe && performance.now() - w.wipe.at < 150 && prev !== v) {
+      if (leavingEl) leavingEl.classList.remove('leaving');
+      leavingEl = VIEW_EL[prev] ? document.getElementById(VIEW_EL[prev]) : null;
+      if (leavingEl) leavingEl.classList.add('leaving');
+      wipeClip({ oldRight: innerWidth, newLeft: innerWidth });
+    }
+  };
+  function wipeClip(c) {
+    const cur = VIEW_EL[document.body.dataset.view] ? document.getElementById(VIEW_EL[document.body.dataset.view]) : null;
+    if (!c) {
+      if (cur) cur.style.clipPath = '';
+      if (leavingEl) { leavingEl.style.clipPath = ''; leavingEl.classList.remove('leaving'); leavingEl = null; }
+      return;
+    }
+    if (cur) cur.style.clipPath = `inset(0 0 0 ${Math.max(0, c.newLeft)}px)`;
+    if (leavingEl) leavingEl.style.clipPath = `inset(0 ${Math.max(0, innerWidth - c.oldRight)}px 0 0)`;
+  }
   function toast(msg, ms = 2600) {
     const t = $('#toast'); t.textContent = msg; t.classList.add('on');
     clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('on'), ms);

@@ -1260,18 +1260,18 @@
       const a = t - (this.homeAt || t);
       const bs = Math.max(W / bg.width, H / bg.height) * 1.06;
       const bw = bg.width * bs, bh = bg.height * bs;
-      ctx.drawImage(bg, (W - bw) / 2 + W * 0.05 + Math.sin(t / 9000) * 8, (H - bh) / 2, bw, bh);
-      // 사람은 수배서 구멍 뒤에 — 얼굴(원본 x165 · y72, 머리 폭 150)이 구멍에 꼭 들어가게 크기와 자리를 맞춘다
+      ctx.drawImage(bg, (W - bw) / 2 + W * 0.05 + Math.sin(a / 9000) * 8, (H - bh) / 2, bw, bh);
+      // 사람은 수배서 구멍 뒤에 — 얼굴(원본 x165 · y72, 머리 폭 150)이 구멍에 꼭 들어가게.
+      // 고르기 화면에서 서 있던 자리(가운데 크게)에서 시작해 수배서가 미끄러져 오는 동안 그 자리로 옮겨 간다
       const fr = this.faceRect && this.faceRect();
-      if (man && fr) {
-        const k = fr.h / 150;
-        const mw = man.width * k, mh = man.height * k;
-        const mx = fr.x + fr.w / 2 - 165 * k, my = fr.y + fr.h / 2 - 72 * k;
-        const breathe = Math.sin(t / 1400) * 1.2;
-        ctx.drawImage(man, mx, my + breathe, mw, mh);
-      } else if (man) {
-        const mh = H * 0.9, mw = man.width * mh / man.height;
-        ctx.drawImage(man, W * 0.75 - mw / 2, H * 0.99 - mh, mw, mh);
+      if (man) {
+        const s0 = H * 0.9 / man.height;
+        const from = { k: s0, x: W * 0.6 - man.width * s0 / 2, y: H * 0.99 - man.height * s0 };
+        let to = from;
+        if (fr) { const k = fr.h / 150; to = { k, x: fr.x + fr.w / 2 - 165 * k, y: fr.y + fr.h / 2 - 72 * k }; }
+        const e = this.homeFrom === 0.6 ? easeIO(a / 950) : 1;
+        const k = lerp(from.k, to.k, e), mx = lerp(from.x, to.x, e), my = lerp(from.y, to.y, e);
+        ctx.drawImage(man, mx, my + Math.sin(t / 1400) * 1.2, man.width * k, man.height * k);
       }
       void a;
       const shade = ctx.createLinearGradient(0, 0, W * 0.6, 0);
@@ -2083,9 +2083,11 @@
       if (!w) return;
       const { ctx, W, H, dpr } = this;
       const p = (t - w.at) / w.dur;
-      if (p >= 1) { this.wipe = null; return; }
+      if (p >= 1) { this.wipe = null; this.onWipe && this.onWipe(null); return; }
       const R = H * 0.62;
       const x = lerp(W + R * 1.2, -R * 1.4, easeIO(p));
+      // 화면 위 글·창(DOM)도 회전초에 맞춰 — 지나간 오른쪽만 새 것, 왼쪽은 옛 것
+      this.onWipe && this.onWipe({ oldRight: x - R * 0.9, newLeft: x + R * 0.95 });
       // 아직 닦이지 않은 왼쪽은 옛 그림
       ctx.save();
       ctx.setTransform(1, 0, 0, 1, 0, 0);
