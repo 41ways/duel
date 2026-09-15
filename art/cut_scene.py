@@ -69,7 +69,10 @@ fore_box = None  # 앞사람은 이제 따로 받은 뒷모습(cut_back.py)을 �
 
 # 회전초
 weed = grab((640, 430, 780, 560), iters=8, fg_poly=[(690, 470), (740, 470), (745, 525), (690, 525)])
-save_cut(weed, 'weed.png', soft=0.8)
+# 사진 속 회전초는 땅 그림자까지 붙어 나온다 — 공 모양만 남겨야 굴릴 때 그림자가 같이 돌지 않는다
+ball = np.zeros((H, W), np.uint8)
+cv2.circle(ball, (709, 496), 54, 1, -1)
+save_cut(weed * ball, 'weed.png', soft=0.8)
 
 # 멀리 선 사람 (지우기만) — 작고 윤곽이 단순해서 손으로 잡은 다각형이 더 확실하다
 far = np.zeros((H, W), np.uint8)

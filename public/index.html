@@ -9,6 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Hahmlet:wght@700;900&family=Nanum+Pen+Script&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@900&text=%E4%B8%80%E9%A8%8E%E8%A8%8E&display=swap">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <link rel="stylesheet" href="/style.css">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤠</text></svg>">
@@ -67,6 +68,7 @@
       <select id="addBotLv"><option value="easy">쉬움</option><option value="normal" selected>보통</option><option value="hard">어려움</option></select>
       <select data-cfg="target"><option value="1">단판</option><option value="3">3선승</option><option value="5">5선승</option></select>
       <select data-cfg="signal"><option value="mix">신호: 화면</option><option value="sound">신호: 소리만</option></select>
+      <select data-cfg="decoys"><option value="true">거짓 신호 포함</option><option value="false">거짓 신호 없음</option></select>
     </div>
     <span class="err" id="lobbyErr"></span>
     <div class="go">
@@ -76,14 +78,18 @@
   </div>
 </section>
 
-<!-- 끝 -->
+<!-- 끝 — 승자 장면 위에 결과판 -->
 <section id="over" class="view">
-  <div class="poster">
-    <ul class="list" id="overList"></ul>
-    <button class="btn primary" id="againBtn">한 판 더</button>
-    <button class="btn" id="lobbyBtn">대기실로</button>
-    <button class="btn" id="homeBtn">처음으로</button>
-    <p class="small" id="overWait"></p>
+  <div class="result">
+    <p class="kicker" id="overKicker">RESULT</p>
+    <h2 id="overTitle"></h2>
+    <ol class="ranks" id="overList"></ol>
+    <div class="acts">
+      <button class="btn primary big" id="againBtn">한 판 더</button>
+      <button class="btn ghost" id="lobbyBtn">대기방으로</button>
+      <button class="btn ghost" id="homeBtn">처음으로</button>
+    </div>
+    <p class="wait" id="overWait"></p>
   </div>
 </section>
 

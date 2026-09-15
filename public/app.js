@@ -45,7 +45,7 @@
   function enterGame({ kind, cfg, players, mine, foreId, duel }) {
     clearTimeout(overT);
     const cast = players.map((p, i) => ({ id: p.id, name: p.name, char: i % CHARS.length, me: kind !== 'pair' && mine.includes(p.id) }));
-    G = { kind, cfg, players: cast, mine: new Set(mine), foreId, duel, r: 0, phase: 'intro', locked: new Set(), sigAt: 0 };
+    G = { kind, cfg, players: cast, mine: new Set(mine), foreId, duel, r: 0, phase: 'intro', locked: new Set(), sigAt: 0, best: {} };
     west.startMatch({ players: cast, foreId, target: cfg.target });
     S.wind(true);
     view('game');
@@ -78,21 +78,30 @@
         break;
       case 'result':
         G.phase = 'result';
+        for (const r of ev.rows) if (r.st === 'ok' && (!G.best[r.id] || r.ms < G.best[r.id])) G.best[r.id] = r.ms;
         west.result(ev);
         break;
       case 'over':
         G.phase = 'over';
         west.over(ev);
         clearTimeout(overT);
-        overT = setTimeout(() => showOver(ev), 600);
+        overT = setTimeout(() => showOver(ev), 1200);
         break;
     }
   }
 
   function showOver(ev) {
     if (!G) return;
-    const ids = [...G.players].sort((a, b) => (ev.scores[b.id] || 0) - (ev.scores[a.id] || 0));
-    $('#overList').innerHTML = ids.map(p => `<li class="${p.id === ev.winnerId ? 'win' : ''}"><span>${esc(p.name)}${p.me ? ' <small>(나)</small>' : ''}</span><em>${CHARS[p.char].ko} · ${ev.scores[p.id] || 0}승</em></li>`).join('');
+    const ids = [...G.players].sort((a, b) => (ev.scores[b.id] || 0) - (ev.scores[a.id] || 0) || (G.best[a.id] || 9e9) - (G.best[b.id] || 9e9));
+    const w = G.players.find(p => p.id === ev.winnerId);
+    $('#overTitle').textContent = w ? `${w.name} 승리` : '승자 없음';
+    $('#overList').innerHTML = ids.map((p, i) => `
+      <li class="${p.id === ev.winnerId ? 'win' : ''}" style="--i:${i}">
+        <span class="rk">${i + 1}</span>
+        <img src="/img/${CHARS[p.char].key}_bust.png" alt="">
+        <span><b>${esc(p.name)}${p.me ? ' <small style="display:inline">나</small>' : ''}</b><small>${CHARS[p.char].ko} · ${G.best[p.id] ? '최고 ' + (G.best[p.id] / 1000).toFixed(3) + '초' : '기록 없음'}</small></span>
+        <strong>${ev.scores[p.id] || 0}<em>승</em></strong>
+      </li>`).join('');
     renderOverButtons();
     view('over');
   }
@@ -258,7 +267,17 @@
   $('#nameIn').value = local.get('duel.name') || '';
   $('#nameIn').addEventListener('change', () => local.set('duel.name', myName()));
 
-  $('#startGameBtn').addEventListener('click', () => { S.unlock(); toHome(); });
+  $('#startGameBtn').addEventListener('click', () => { S.unlock(); west.select(); view('select'); });
+  $('#scene').addEventListener('pointermove', e => { if (document.body.dataset.view === 'select') west.selectHover(e.clientX); });
+  $('#scene').addEventListener('pointerleave', () => { if (document.body.dataset.view === 'select') west.selectHover(null); });
+  $('#scene').addEventListener('click', e => {
+    if (document.body.dataset.view !== 'select') return;
+    S.unlock();
+    west.selectPick(e.clientX, side => {
+      if (side === 'west') toHome();
+      else { toast('일기토는 준비 중이에요. 곧 열려요.'); setTimeout(() => west.selectReset(), 900); }
+    });
+  });
   $('#createBtn').addEventListener('click', () => {
     S.unlock(); local.set('duel.name', myName()); $('#homeErr').textContent = '';
     connect(() => wsSend({ t: 'create', name: myName(), mode: 'west' }));
@@ -281,7 +300,8 @@
   });
   $('#addBotBtn').addEventListener('click', () => wsSend({ t: 'addBot', level: $('#addBotLv').value }));
   document.querySelectorAll('#hostOpts select[data-cfg]').forEach(sel => sel.addEventListener('change', () => {
-    const v = sel.dataset.cfg === 'target' ? Number(sel.value) : sel.value;
+    const k = sel.dataset.cfg;
+    const v = k === 'target' ? Number(sel.value) : k === 'decoys' ? sel.value === 'true' : sel.value;
     wsSend({ t: 'cfg', cfg: { [sel.dataset.cfg]: v } });
   }));
   $('#startBtn').addEventListener('click', () => { S.unlock(); wsSend({ t: 'start' }); });
@@ -312,6 +332,7 @@
   const titleT = setInterval(() => { if (west.titleDone) { document.body.classList.add('ready'); clearInterval(titleT); } }, 100);
   $('#title').addEventListener('pointerdown', e => { if (e.target.id !== 'startGameBtn') { S.unlock(); west.skipTitle(); } });
   const q = new URLSearchParams(location.search).get('room');
+  // 초대 링크로 오면 시작 연출 뒤 바로 처음 화면(방 코드 칸)으로
   if (sess.get('duel.code') && sess.get('duel.token')) resume();
   else if (q) { $('#codeIn').value = q.toUpperCase().slice(0, 4); }
 })();

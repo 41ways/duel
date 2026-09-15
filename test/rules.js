@@ -127,4 +127,12 @@ check('사람이 나가서 하나 남으면 끝', () => {
   assert.strictEqual(g.last('over').winnerId, 2);
 });
 
+check('거짓 신호 끄면 decoy 가 안 나온다', () => {
+  const g = game({ mode: 'west', decoys: false }, [1, 2].map(id => ({ id, bot: true, level: 'hard' })));
+  g.d.start();
+  g.c.run(5 * 60_000);
+  assert.strictEqual(g.evs.filter(e => e.k === 'decoy').length, 0);
+  assert.strictEqual(D.normCfg({}).decoys, true);
+});
+
 console.log(`\n${pass}개 통과`);

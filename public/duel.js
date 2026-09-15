@@ -68,6 +68,7 @@
       rule: mode === 'samurai' ? 'points' : (RULES.includes(c.rule) ? c.rule : 'points'),
       target: TARGETS.includes(c.target) ? c.target : (mode === 'samurai' ? 3 : 1),
       signal: SIGNALS.includes(c.signal) ? c.signal : 'mix',
+      decoys: c.decoys !== false,               // 거짓 신호(회전초 · 까마귀 · "지금?")를 섞을지
     };
   }
 
@@ -181,7 +182,7 @@
       this.emit({ k: 'wait', r });
       const total = this.between(T.waitMin, T.waitMax);
       const x = this.rand();
-      const n = x < 0.3 ? 0 : x < 0.75 ? 1 : 2;
+      const n = !this.cfg.decoys ? 0 : x < 0.3 ? 0 : x < 0.75 ? 1 : 2;
       let last = 0;
       for (let i = 0; i < n; i++) {
         const at = this.between(Math.max(600, last + 700), total - T.decoyGap);
