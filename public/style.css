@@ -21,7 +21,7 @@ body[data-view="game"] #quitBtn, body[data-view="lobby"] #quitBtn, body[data-vie
 
 .view { position: fixed; inset: 0; z-index: 3; display: none; padding: 60px 16px 24px; align-items: center; justify-content: flex-end; flex-direction: column; overflow-y: auto; }
 body[data-view="title"] #title, body[data-view="home"] #home, body[data-view="lobby"] #lobby, body[data-view="over"] #over, body[data-view="soon"] #soon { display: flex; }
-#title { padding-bottom: 7vh; }
+#title { padding-bottom: 17vh; }
 #startGameBtn { opacity: 0; transition: opacity .6s, transform .15s; }
 .ready #startGameBtn { opacity: 1; }
 
@@ -56,12 +56,14 @@ body[data-view="title"] #title, body[data-view="home"] #home, body[data-view="lo
 .link:hover { opacity: 1; text-decoration: underline; }
 
 /* ───────── 처음 — 빈 수배서 한 장 ───────── */
-#home { align-items: flex-start; justify-content: center; padding-left: max(16px, 6vw); }
+#home { align-items: flex-start; justify-content: safe center; padding-left: max(16px, 6vw); }
 .sheet {
-  width: min(420px, 46vw, calc((100vh - 110px) * .773)); aspect-ratio: 576 / 745;
+  --w: clamp(300px, min(420px, 46vw, calc((100vh - 110px) * .773)), 420px);
+  width: var(--w); min-height: calc(var(--w) * 1.293);
   background: url(/img/poster_blank.png) center / 100% 100% no-repeat;
   filter: drop-shadow(0 22px 40px #000c);
-  padding: 25% 13% 9%;
+  /* 여백은 수배서 자신의 폭 기준 — %로 두면 화면 폭 기준이 되어 넓은 창에서 속이 찌부러진다 */
+  padding: calc(var(--w) * .25) calc(var(--w) * .13) calc(var(--w) * .09);
   display: flex; flex-direction: column; justify-content: center; gap: 12px; text-align: center;
   animation: pin .5s cubic-bezier(.2,1.4,.4,1) both;
 }
@@ -172,7 +174,7 @@ small { font-size: 12px; opacity: .7; font-weight: 700; }
 
 @media (max-width: 700px) {
   #home { align-items: center; padding-left: 16px; }
-  .sheet { width: min(380px, 92vw, calc((100vh - 90px) * .773)); }
+  .sheet { --w: min(380px, 92vw); }
   .chat { bottom: 200px; }
   .result { border-width: 24px; }
   .brush { font-size: 84px; }

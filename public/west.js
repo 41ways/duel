@@ -468,7 +468,7 @@
       const shift = cut ? fs * lerp(0.26, 0.17, easeOut((a - SL - 100) / 500)) : 0;
       const textA = cut ? 1 : lit * 0.92;
       // 먹 붓자국 시안은 글자 뒤에 깔린다
-      if ((this.cutStyle || 0) === 3 && a >= SL + 110) this.drawCutScar(3, easeOut((a - SL - 110) / 400), gapX, cy, ux, uy, fs, t);
+      if ((this.cutStyle ?? 1) === 3 && a >= SL + 110) this.drawCutScar(3, easeOut((a - SL - 110) / 400), gapX, cy, ux, uy, fs, t);
       if (textA > 0.01) {
         ctx.globalAlpha = textA;
         const tg = ctx.createLinearGradient(0, cy - fs * 0.5, 0, cy + fs * 0.5);
@@ -481,7 +481,7 @@
       ctx.restore();
 
       // 벤 자국 — 시안 다섯 가지 (this.cutStyle)
-      if (a >= SL + 110 && (this.cutStyle || 0) !== 3) this.drawCutScar(this.cutStyle || 0, easeOut((a - SL - 110) / 400), gapX, cy, ux, uy, fs, t);
+      if (a >= SL + 110 && (this.cutStyle ?? 1) !== 3) this.drawCutScar(this.cutStyle ?? 1, easeOut((a - SL - 110) / 400), gapX, cy, ux, uy, fs, t);
       // 칼빛 — 결과 투 사이를 지나간다
       const sd = a - SL;
       if (sd >= 0 && sd < 560) {
@@ -643,39 +643,34 @@
     drawTitleSwords(t, cd, fs) {
       if (cd <= -240) return;
       const bp = this.btnCenter();
-      const L = Math.max(bp.w * 0.62, fs * 0.7);
-      // 위에서 내리꽂힌다 — 0 에서 칼끝이 단추 아래에서 X 로 만난다
+      const L = Math.max(bp.w * 0.72, fs * 0.8);
+      // 위에서 내리꽂혀 단추 뒤에 거의 눕듯이 X 로 걸린다
       const stab = easeIn((cd + 240) / 240);
-      const rec = cd > 0 ? Math.exp(-cd / 150) * Math.sin(cd / 38) * 0.05 : 0;
+      const rec = cd > 0 ? Math.exp(-cd / 150) * Math.sin(cd / 38) * 0.04 : 0;
       const h = this._hov || { on: false, at: -1e9, hit: true };
       const ha = t - h.at;
-      // 호버 — 0–140 뽑아 올림, 140–220 다시 내리꽂음, 그 뒤 떨림
-      let lift = 0;
-      if (ha < 140) lift = easeOut(ha / 140);
-      else if (ha < 220) lift = 1 - easeIn((ha - 140) / 80);
-      const quiver = ha >= 220 && ha < 700 ? Math.exp(-(ha - 220) / 110) * Math.sin((ha - 220) / 30) * 0.05 : 0;
-      if (ha >= 215 && !h.hit) {
+      // 호버 — 가위처럼 깔짝: 0–90 벌어짐, 90–160 닫힘(부딪힘), 그 뒤 가라앉음
+      let snip = 0;
+      if (ha < 90) snip = 0.26 * easeOut(ha / 90);
+      else if (ha < 160) snip = lerp(0.26, -0.05, easeIn((ha - 90) / 70));
+      else if (ha < 520) snip = -0.05 * Math.exp(-(ha - 160) / 90) * Math.cos((ha - 160) / 40);
+      if (ha >= 155 && !h.hit) {
         h.hit = true;
         this.S && this.S.clink();
-        this.shakeIt(140, 6);
-        for (let i = 0; i < 24; i++) {
-          const an = Math.PI * (0.15 + Math.random() * 0.7) * (Math.random() < 0.5 ? -1 : 1) - Math.PI / 2;
-          const sp = (0.3 + Math.random()) * fs * 1.8;
-          this.sparks.push({ x: bp.x, y: bp.y + bp.w * 0.12, vx: Math.cos(an) * sp, vy: Math.sin(an) * sp, age: 0, life: 0.25 + Math.random() * 0.45 });
+        for (let i = 0; i < 18; i++) {
+          const an = Math.random() * TAU;
+          const sp = (0.3 + Math.random()) * fs * 1.4;
+          this.sparks.push({ x: bp.x, y: bp.y + bp.w * 0.02, vx: Math.cos(an) * sp, vy: Math.sin(an) * sp, age: 0, life: 0.2 + Math.random() * 0.35 });
         }
       }
-      const idle = h.on && ha > 700 ? Math.sin(t / 240) * 0.02 : 0;
+      const cross = { x: bp.x, y: bp.y + bp.w * 0.02 };
+      const BASE = 0.36;                              // 가로에서 20° 남짓 — 거의 누운 X
       for (const side of [-1, 1]) {
-        // 칼끝 방향: 아래 안쪽. 왼쪽 칼은 오른쪽 아래로, 오른쪽 칼은 왼쪽 아래로
-        const ang = side < 0 ? 1.05 : Math.PI - 1.05;
-        const wob = (rec + quiver + idle) * side;
-        // 칼끝이 서로를 지나쳐 X 가 되게 — 교차점은 단추 가운데 조금 아래
-        const tipX = bp.x + Math.cos(ang) * L * 0.42;
-        const tipY = bp.y + bp.w * 0.06 + Math.sin(ang) * L * 0.42;
-        const back = (1 - stab) * this.H * 0.7 + lift * L * 0.55;
-        const hx = tipX - Math.cos(ang + wob) * (L + back);
-        const hy = tipY - Math.sin(ang + wob) * (L + back);
-        this.drawKatana(hx, hy, L, ang + wob, side);
+        const ang = (side < 0 ? BASE : Math.PI - BASE) + (side < 0 ? -1 : 1) * (snip + rec);
+        const d = L * 0.55 + (1 - stab) * this.H * 0.7;
+        const hx = cross.x - Math.cos(ang) * d - (1 - stab) * side * 0;
+        const hy = cross.y - Math.sin(ang) * d;
+        this.drawKatana(hx, hy, L, ang, side);
       }
     }
 
