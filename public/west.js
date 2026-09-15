@@ -1247,7 +1247,7 @@
     /** 방장 표시 — WANTED 위, 집 모양 안에 H */
     drawHostMark(cx, top, k, alpha) {
       const { ctx } = this;
-      const w = 64 * k, h = 58 * k;
+      const w = 118 * k, h = 104 * k;
       ctx.save();
       ctx.globalAlpha = alpha;
       ctx.translate(cx, top);
@@ -1267,7 +1267,7 @@
       ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
       ctx.stroke();
       ctx.fillStyle = '#f3e1b8';
-      ctx.font = `${30 * k}px Rye, ${FONT_W}`;
+      ctx.font = `${54 * k}px Rye, ${FONT_W}`;
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText('H', 0, h * 0.58);
       ctx.restore();
