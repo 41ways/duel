@@ -1460,9 +1460,12 @@
     // 자리 — 나는 왼쪽에서 오른쪽으로, 상대는 오른쪽에서 왼쪽으로 스친다. face: 1 오른쪽을 봄, -1 왼쪽을 봄
     const e = easeIO(clamp(b / X.cross));
     const turnP = clamp((b - X.turn) / X.turnDur);
+    // 무릎 꿇는 쪽은 언제나 오른쪽 — 진 쪽이 왼쪽에서 출발해 오른쪽으로 스쳐 간다(캄캄해서 누군지는 안 보인다)
+    const loserOther = !draw && other && other.id === res.loserId;
+    const [lp, rp] = loserOther ? [other, me] : [me, other];
     const seats = [
-      { p: me, from: W * 0.24, to: W * 0.72, dir: 1 },
-      { p: other, from: W * 0.76, to: W * 0.28, dir: -1 },
+      { p: lp, from: W * 0.24, to: W * 0.72, dir: 1 },
+      { p: rp, from: W * 0.76, to: W * 0.28, dir: -1 },
     ];
     for (const s of seats) {
       s.x = lerp(s.from, s.to, e);
