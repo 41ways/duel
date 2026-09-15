@@ -85,7 +85,7 @@
         G.phase = 'over';
         west.over(ev);
         clearTimeout(overT);
-        overT = setTimeout(() => showOver(ev), 1200);
+        overT = setTimeout(() => showOver(ev), 400);
         break;
     }
   }
@@ -246,8 +246,8 @@
     const s = N;
     const host = s.hostId === s.meId;
     $('#roomCode').textContent = s.code;
-    document.querySelectorAll('#hostOpts select[data-cfg]').forEach(sel => { sel.value = String(s.cfg[sel.dataset.cfg]); });
-    $('#hostOpts').hidden = !host;
+    document.querySelectorAll('#hostOpts select[data-cfg]').forEach(sel => { sel.value = String(s.cfg[sel.dataset.cfg]); sel.disabled = !host; });
+    $('#rulesNote').textContent = host ? '빈 자리를 누르면 봇을 앉히고, 다른 사람 수배서를 누르면 방장을 넘기거나 내보낼 수 있어요.' : '방장이 규칙을 정하고 있어요.';
     west.canAddBot = host && s.players.length < R.MAX_PLAYERS.west;
     if (!host) closeSlotMenu();
     $('#startBtn').disabled = !host;
@@ -392,6 +392,7 @@
   /* ─────────────────────── 시작 ─────────────────────── */
 
   west.btnRect = () => $('#startGameBtn').getBoundingClientRect();
+  west.wallRect = () => $('#wall').getBoundingClientRect();
   $('#startGameBtn').addEventListener('pointerenter', () => west.titleHover(true));
   $('#startGameBtn').addEventListener('pointerleave', () => west.titleHover(false));
   west.title();

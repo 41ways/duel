@@ -49,9 +49,10 @@ print('poster.png', r - l, 'x', b - t, 'offset', (int(l), int(t)))
 wm = np.zeros((H, W), np.uint8)
 cv2.circle(wm, (1287, 649), 30, 1, -1)
 src = cv2.inpaint(src, wm, 9, cv2.INPAINT_TELEA)
-# 왼쪽 판자를 거울로 번갈아 이어 붙이면 경계에서 결이 이어진다
+# 왼쪽 · 오른쪽 판자를 번갈아 — 거울로 뒤집으면 옹이가 대칭으로 보여 어색하다
 left = src[:, 0:410]
-wall = np.hstack([left, left[:, ::-1], left, left[:, ::-1]])
+right = src[:, 1000:W]
+wall = np.hstack([left, right, left, right])
 cv2.imwrite(os.path.join(OUT, 'wood.jpg'), wall, [cv2.IMWRITE_JPEG_QUALITY, 84])
 print('wood.jpg', wall.shape[1], 'x', wall.shape[0])
 

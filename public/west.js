@@ -271,8 +271,8 @@
       this.later(() => { this.S && this.S.thud(1); this.dustBurst(); this.shakeIt(300, 10); }, FALL + 2400);
       m.res.revealAt = t0 + FALL + 3100;                 // 먼지막이 가장 짙을 때 장면을 바꾼다
       this.later(() => { this.view = 'reveal'; }, FALL + 3100);
-      m.res.nameAt = t0 + FALL + 5300;
-      this.later(() => this.S && this.S.whistle(), FALL + 4900);
+      m.res.nameAt = t0 + FALL + 4300;
+      this.later(() => this.S && this.S.whistle(), FALL + 4000);
     }
 
     over(ev) { if (this.match) this.match.overAt = now(); void ev; }
@@ -643,7 +643,7 @@
     drawTitleSwords(t, cd, fs) {
       if (cd <= -240) return;
       const bp = this.btnCenter();
-      const L = Math.max(bp.w * 0.72, fs * 0.8);
+      const L = Math.max(bp.w * 0.9, fs * 1.0);
       // 위에서 내리꽂혀 단추 뒤에 거의 눕듯이 X 로 걸린다
       const stab = easeIn((cd + 240) / 240);
       const rec = cd > 0 ? Math.exp(-cd / 150) * Math.sin(cd / 38) * 0.04 : 0;
@@ -1060,17 +1060,16 @@
       const light = ctx.createRadialGradient(W / 2, H * 0.1, 0, W / 2, H * 0.3, Math.max(W, H) * 0.8);
       light.addColorStop(0, 'rgba(255,220,160,.18)'); light.addColorStop(1, 'rgba(0,0,0,.55)');
       ctx.fillStyle = light; ctx.fillRect(0, 0, W, H);
-      // 네 자리 — 넓으면 한 줄, 좁으면 두 줄. 아래는 단추 줄, 오른쪽 아래는 채팅
-      const barH = W < 700 ? 250 : 150;           // 아래 띠 + 채팅 자리
-      const top = 58, areaH = H - barH - top;
-      const wide = W / areaH > 1.6;
-      const cols = wide ? 4 : 2, rows = wide ? 1 : 2;
+      // 네 자리는 app 이 비워 둔 벽 자리(wallRect) 안에 — 넓으면 한 줄, 좁으면 두 줄
+      const r = (this.wallRect && this.wallRect()) || { left: 0, top: 58, width: W, height: H - 160 };
       const aspect = poster.width / poster.height;
-      const ph = Math.min((areaH - (rows + 1) * 16) / rows, (W - (cols + 1) * 40) / cols / aspect);
+      const fit = c => { const rw = Math.ceil(4 / c); return Math.min((r.height - (rw + 1) * 12) / rw, (r.width - (c + 1) * 28) / c / aspect); };
+      const cols = fit(4) >= fit(2) ? 4 : 2, rows = cols === 4 ? 1 : 2;
+      const ph = fit(cols);
       const pw = ph * aspect;
-      const gx = (W - cols * pw) / (cols + 1);
-      const gy = (areaH - rows * ph) / (rows + 1);
-      const at = i => ({ x: gx + (i % cols) * (pw + gx), y: top + gy + Math.floor(i / cols) * (ph + gy) });
+      const gx = (r.width - cols * pw) / (cols + 1);
+      const gy = (r.height - rows * ph) / (rows + 1);
+      const at = i => ({ x: r.left + gx + (i % cols) * (pw + gx), y: r.top + gy + Math.floor(i / cols) * (ph + gy) });
       this.slotRects = [0, 1, 2, 3].map(i => ({ ...at(i), w: pw, h: ph }));
       const list = [...(this.posters || new Map()).values()];
       for (let i = 0; i < 4; i++) {
@@ -1887,7 +1886,7 @@
       if (!m || !m.res || !m.res.hazeAt) return;
       const a = t - m.res.hazeAt;
       if (a < 0) return;
-      const up = easeOut(a / 520), down = easeIO((a - 900) / 1900);
+      const up = easeOut(a / 450), down = easeIO((a - 650) / 950);
       const k = up * (1 - down);
       if (k <= 0.005) return;
       const { ctx, W, H } = this;
@@ -1933,7 +1932,7 @@
       if (!m || !m.res) return;
       const a = t - m.res.revealAt;
       const win = this.pl(m.res.winId);
-      const ex = easeIO((a - 700) / 2200);
+      const ex = easeIO((a - 250) / 1500);
       ctx.save();
       const z = lerp(1.35, 1.55, easeIO(a / 5000));
       this.plateCam(955, 390, z);

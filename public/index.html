@@ -59,29 +59,31 @@
   </div>
 </section>
 
-<!-- 대기실 — 수배서 벽은 캔버스가 그린다. 여기는 아래 띠 · 자리 메뉴 · 채팅 -->
+<!-- 대기실 — 왼쪽 방 설정 · 오른쪽 위 사람들(수배서 벽은 캔버스가 #wall 자리에 그린다) · 그 아래 채팅 -->
 <section id="lobby" class="view">
-  <div class="slotmenu" id="slotMenu"><p class="sm-title" id="smTitle"></p><div class="sm-body" id="smBody"></div></div>
-  <div class="chat" id="chat">
-    <ol id="chatLog"></ol>
-    <form id="chatForm" autocomplete="off"><input id="chatIn" maxlength="120" placeholder="한마디"><button class="btn slim">보내기</button></form>
-  </div>
-  <div class="bar">
-    <div class="code-box">
-      <small>ROOM No.</small><b class="code" id="roomCode">----</b>
-      <button class="btn slim" id="copyBtn">초대 링크 복사</button>
+  <aside class="rules">
+    <p class="rules-kicker">ROOM No.</p>
+    <b class="code" id="roomCode">----</b>
+    <button class="btn slim" id="copyBtn">초대 링크 복사</button>
+    <div class="rules-list" id="hostOpts">
+      <label><span>판 수</span><select data-cfg="target"><option value="1">단판</option><option value="3">3선승</option><option value="5">5선승</option></select></label>
+      <label><span>신호</span><select data-cfg="signal"><option value="mix">화면에 "지금!"</option><option value="sound">소리만</option></select></label>
+      <label><span>거짓 신호</span><select data-cfg="decoys"><option value="true">포함</option><option value="false">없음</option></select></label>
     </div>
-    <div class="opts" id="hostOpts">
-      <select data-cfg="target"><option value="1">단판</option><option value="3">3선승</option><option value="5">5선승</option></select>
-      <select data-cfg="signal"><option value="mix">신호: 화면</option><option value="sound">신호: 소리만</option></select>
-      <select data-cfg="decoys"><option value="true">거짓 신호 포함</option><option value="false">거짓 신호 없음</option></select>
-    </div>
+    <p class="rules-note" id="rulesNote"></p>
     <span class="err" id="lobbyErr"></span>
     <div class="go">
-      <button class="btn" id="leaveBtn">나가기</button>
       <button class="btn primary" id="startBtn">결투 시작</button>
+      <button class="btn" id="leaveBtn">나가기</button>
     </div>
+  </aside>
+  <div id="wall"></div>
+  <div class="chat" id="chat">
+    <p class="chat-kicker">SALOON TALK</p>
+    <ol id="chatLog"></ol>
+    <form id="chatForm" autocomplete="off"><input id="chatIn" maxlength="120" placeholder="한마디 적기"><button class="btn slim">보내기</button></form>
   </div>
+  <div class="slotmenu" id="slotMenu"><p class="sm-title" id="smTitle"></p><div class="sm-body" id="smBody"></div></div>
 </section>
 
 <!-- 끝 — 승자 장면 위에 결과판 -->

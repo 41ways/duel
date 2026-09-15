@@ -36,7 +36,7 @@
     intro: { west: 2000, samurai: 2600 },
     waitMin: 2200, waitMax: 6500,
     decoyGap: 900,                            // 가짜 신호와 진짜 신호 사이 최소 간격
-    result: { west: 9500, samurai: 3800 },       // 총성 → 암전 → 무릎 · 쓰러짐 → 먼지 너머 승자 · 이름
+    result: { west: 7800, samurai: 3800 },       // 총성 → 암전 → 무릎 · 쓰러짐 → 먼지 너머 승자 · 이름
     resultNone: 3200,                            // 아무도 못 맞혔을 때
   };
 
