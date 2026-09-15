@@ -32,25 +32,26 @@
   <button class="btn primary big" id="startGameBtn">게임 시작</button>
 </section>
 
-<!-- 처음 — 빈 수배서 한 장에 이름을 적고 방을 만든다 -->
+<!-- 처음 — 왼쪽 마을 게시판에 열린 방, 오른쪽 수배서는 사진 칸이 뚫려 뒤에 선 사람 얼굴이 비친다 -->
 <section id="home" class="view">
   <button class="back" id="backSelect">☜ 방식 다시 고르기</button>
-  <div class="sheet">
+  <div class="townboard">
+    <div class="tb-in">
+      <p class="tb-head">열린 방 <small id="online"></small></p>
+      <ul id="roomList"></ul>
+      <p class="rb-empty" id="roomEmpty">아직 열린 방이 없어요. 오른쪽에서 방을 만들어 보세요.</p>
+    </div>
+  </div>
+  <div class="sheet holed">
+    <div class="hole" id="faceHole"></div>
     <label class="field"><span>NAME</span><input id="nameIn" maxlength="10" placeholder="이름을 적으세요" autocomplete="off"></label>
     <button class="btn primary" id="createBtn">방 만들기</button>
-    <p class="or">OR</p>
     <div class="joinrow">
       <label class="field"><span>No.</span><input id="codeIn" maxlength="4" placeholder="방 코드" autocomplete="off" autocapitalize="characters"></label>
       <button class="btn" id="joinBtn">들어가기</button>
     </div>
     <button class="link" id="pairBtn">☞ 한 기기로 둘이 하기</button>
     <p class="err" id="homeErr"></p>
-  </div>
-  <div class="roomboard">
-    <p class="rb-kicker">OPEN ROOMS</p>
-    <h3>열린 방 <small id="online"></small></h3>
-    <ul id="roomList"></ul>
-    <p class="rb-empty" id="roomEmpty">아직 열린 방이 없어요.<br>방을 만들어 보세요.</p>
   </div>
 </section>
 

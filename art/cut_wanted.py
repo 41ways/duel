@@ -85,3 +85,23 @@ blank = post.copy()
 blank[:, :, :3] = np.clip(out, 0, 255).astype(np.uint8)
 cv2.imwrite(os.path.join(OUT, 'poster_blank.png'), blank)
 print('poster_blank.png', pw, 'x', ph)
+
+# ── 구멍 뚫린 수배서: 사진 칸을 도려내 뒤에 선 사람 얼굴이 비치게 (방 만들기 화면) ──
+# 구멍 자리(원본 좌표)는 화면(app.js · west.js)이 얼굴을 맞출 때 같이 쓴다: x 128 · y 150 · 320 × 240
+HX, HY, HW, HH = 128, 150, 320, 240
+holed = cv2.imread(os.path.join(OUT, 'poster_blank.png'), cv2.IMREAD_UNCHANGED)
+hh_, ww_ = holed.shape[:2]
+yy, xx = np.mgrid[0:hh_, 0:ww_].astype(np.float32)
+rng = np.random.default_rng(7)
+jag = cv2.GaussianBlur(rng.normal(0, 1, (hh_, ww_)).astype(np.float32), (0, 0), 3) * 9
+dx = np.minimum(xx - HX, HX + HW - xx)
+dy = np.minimum(yy - HY, HY + HH - yy)
+inside = np.minimum(dx, dy) + jag                     # 가장자리가 살짝 해지게
+cut = (inside > 0).astype(np.float32)
+cut = cv2.GaussianBlur(cut, (0, 0), 0.8)
+holed[:, :, 3] = (holed[:, :, 3].astype(np.float32) * (1 - cut)).astype(np.uint8)
+# 도려낸 가장자리는 종이가 그을린 듯 어둡게
+rim = np.clip(1 - np.abs(inside) / 10, 0, 1) * (inside < 0)
+holed[:, :, :3] = (holed[:, :, :3].astype(np.float32) * (1 - 0.6 * rim[..., None])).astype(np.uint8)
+cv2.imwrite(os.path.join(OUT, 'poster_hole.png'), holed)
+print('poster_hole.png')

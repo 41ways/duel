@@ -43,7 +43,7 @@ async function check(name, fn) {
   await check('화면 파일 · 이미지', async () => {
     const html = await fetch(BASE + '/').then(r => r.text());
     assert.ok(html.includes('결투'));
-    for (const f of ['/style.css', '/duel.js', '/west.js', '/app.js', '/sound.js', '/img/plate.jpg', '/img/back.png', '/img/back_arm.png', '/img/gun1_far.png', '/img/gun4_bust.png', '/img/poster.png', '/img/wood.jpg', '/img/back_down.png', '/img/back_dead.png', '/img/poster_blank.png', '/img/grunge.png', '/img/poster_blank.png', '/img/mode_west_bg.jpg', '/img/mode_samurai_man.png']) {
+    for (const f of ['/style.css', '/duel.js', '/west.js', '/app.js', '/sound.js', '/img/plate.jpg', '/img/back.png', '/img/back_arm.png', '/img/gun1_far.png', '/img/gun4_bust.png', '/img/poster.png', '/img/wood.jpg', '/img/back_down.png', '/img/back_dead.png', '/img/poster_blank.png', '/img/grunge.png', '/img/poster_hole.png', '/img/board.png', '/img/mode_west_bg.jpg', '/img/mode_samurai_man.png']) {
       assert.strictEqual((await fetch(BASE + f)).status, 200, f);
     }
   });

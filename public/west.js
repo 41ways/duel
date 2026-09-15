@@ -71,7 +71,7 @@
     }
 
     async loadAll() {
-      const names = ['plate.jpg', 'back.png', 'back_arm.png', 'back_down.png', 'back_dead.png', 'weed.png', 'low.jpg', 'poster_blank.png', 'wood.jpg', 'ink_stroke.png', 'mode_west_bg.jpg', 'mode_west_man.png', 'mode_samurai_bg.jpg', 'mode_samurai_man.png',
+      const names = ['plate.jpg', 'back.png', 'back_arm.png', 'back_down.png', 'back_dead.png', 'weed.png', 'low.jpg', 'poster_blank.png', 'poster_hole.png', 'board.png', 'wood.jpg', 'ink_stroke.png', 'mode_west_bg.jpg', 'mode_west_man.png', 'mode_samurai_bg.jpg', 'mode_samurai_man.png',
         ...CHARS.flatMap(c => [`${c.key}.png`, `${c.key}_far.png`, `${c.key}_bust.png`])];
       const imgs = await Promise.all(names.map(n => load('/img/' + n)));
       names.forEach((n, i) => { this.img[n.replace(/\.\w+$/, '')] = imgs[i]; });
@@ -1261,19 +1261,19 @@
       const bs = Math.max(W / bg.width, H / bg.height) * 1.06;
       const bw = bg.width * bs, bh = bg.height * bs;
       ctx.drawImage(bg, (W - bw) / 2 + W * 0.05 + Math.sin(t / 9000) * 8, (H - bh) / 2, bw, bh);
-      const narrow = W < 760;
-      const mxN = lerp(this.homeFrom || 0.72, narrow ? 0.5 : 0.8, easeIO(a / 800));
-      if (man) {
-        const mh = H * (narrow ? 0.7 : 0.9);
-        const mw = man.width * mh / man.height;
-        const cx = W * mxN;
-        const shadow = ctx.createRadialGradient(cx, H * 0.97, 0, cx, H * 0.97, mw * 0.6);
-        shadow.addColorStop(0, 'rgba(0,0,0,.55)'); shadow.addColorStop(1, 'rgba(0,0,0,0)');
-        ctx.fillStyle = shadow; ctx.fillRect(cx - mw, H * 0.9, mw * 2, H * 0.12);
-        const rim = this.backlit('mode_west_man');
-        if (rim) { ctx.save(); ctx.globalAlpha = 0.28; ctx.drawImage(rim.rim, cx - mw / 2 + mh * 0.004, H * 0.99 - mh - mh * 0.003, mw, mh); ctx.restore(); }
-        ctx.drawImage(man, cx - mw / 2, H * 0.99 - mh + Math.sin(t / 1400) * 1.5, mw, mh);
+      // 사람은 수배서 구멍 뒤에 — 얼굴(원본 x165 · y72, 머리 폭 150)이 구멍에 꼭 들어가게 크기와 자리를 맞춘다
+      const fr = this.faceRect && this.faceRect();
+      if (man && fr) {
+        const k = fr.h / 150;
+        const mw = man.width * k, mh = man.height * k;
+        const mx = fr.x + fr.w / 2 - 165 * k, my = fr.y + fr.h / 2 - 72 * k;
+        const breathe = Math.sin(t / 1400) * 1.2;
+        ctx.drawImage(man, mx, my + breathe, mw, mh);
+      } else if (man) {
+        const mh = H * 0.9, mw = man.width * mh / man.height;
+        ctx.drawImage(man, W * 0.75 - mw / 2, H * 0.99 - mh, mw, mh);
       }
+      void a;
       const shade = ctx.createLinearGradient(0, 0, W * 0.6, 0);
       shade.addColorStop(0, 'rgba(10,6,3,.55)'); shade.addColorStop(1, 'rgba(10,6,3,0)');
       ctx.fillStyle = shade; ctx.fillRect(0, 0, W, H);

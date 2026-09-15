@@ -414,6 +414,12 @@
 
   west.btnRect = () => $('#startGameBtn').getBoundingClientRect();
   west.wallRect = () => $('#wall').getBoundingClientRect();
+  // 수배서 구멍의 '최종' 자리 — 미끄러져 들어오는 중에도 사람은 제자리에 서 있어야 해서 transform 을 뺀 offset 으로 잰다
+  west.faceRect = () => {
+    const hole = $('#faceHole'), sheet = hole.parentElement;
+    if (document.body.dataset.view !== 'home' || !hole.offsetWidth) return null;
+    return { x: sheet.offsetLeft + hole.offsetLeft, y: sheet.offsetTop + hole.offsetTop - $('#home').scrollTop, w: hole.offsetWidth, h: hole.offsetHeight };
+  };
   $('#startGameBtn').addEventListener('pointerenter', () => west.titleHover(true));
   $('#startGameBtn').addEventListener('pointerleave', () => west.titleHover(false));
   west.title();
