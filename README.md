@@ -4,10 +4,10 @@
 
 https://duel.41ways.workers.dev/
 
-- 시작 화면(권총과 칼이 부딪혀 로고) → 방 만들기 → 들어온 사람은 지평선에서 걸어 나온다
+- 시작 화면(결투 두 글자) → 방 만들기 → 대기방은 나무 벽에 수배서. 들어오면 사진 붙은 수배서가 박힌다
 - 결투 시작: 회전초가 화면을 닦고 번개로 갈라진 선수 소개, 다시 회전초 → 결투장
 - 신호 전에 쏘면 오발. 0.1초보다 빠르면 부정출발
-- 총성 → 암전 → 무릎 꿇고 쓰러지는 장면 → 먼지 너머 승자와 이름
+- 총성 → 암전 → 역광 속에서 무릎 꿇고 쓰러지는 뒷모습 → 먼지 너머 실루엣에서 드러나는 승자와 이름
 - 조작은 마우스(터치) 하나. 봇이랑 연습, 한 기기 둘이(화면 왼쪽/오른쪽)
 
 ## 구조
@@ -24,7 +24,8 @@ https://duel.41ways.workers.dev/
 ```
 python art/cut_lineup.py   # westernduelists.png → gun1~4 전신 · 가슴 위
 python art/cut_scene.py    # westernduel.png → 배경판 · 회전초 · 낮은 카메라 배경
-python art/cut_back.py     # westernduelistback.png → 앞사람 뒷모습 · 총 드는 팔, 멀리 선 사람 색 맞추기
+python art/cut_back.py     # 뒷모습 · 무릎 · 쓰러짐 → 앞사람 · 총 드는 팔 · 쓰러지는 장면, 멀리 선 사람 색 맞추기
+python art/cut_wanted.py   # wanted.png → 수배서 한 장 · 나무 벽
 ```
 
 ## 개발

@@ -81,7 +81,7 @@ check('신호 전에 누르면 오발, 신호 뒤 빠른 사람이 점수', () =
   assert.ok(g.d.input(3, { r: 1 }));
   assert.ok(g.last('early').id === 3);
   assert.ok(!g.d.input(3, { r: 1, ms: 200 }), '두 번은 못 쏜다');
-  g.c.run(g.c.now + D.T.waitMax);
+  for (let i = 0; i < 100 && g.d.phase !== 'signal'; i++) g.c.run(g.c.now + 100);
   assert.strictEqual(g.d.phase, 'signal');
   g.d.input(1, { r: 1, ms: 310 });
   g.d.input(2, { r: 1, ms: 240 });

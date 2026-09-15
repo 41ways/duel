@@ -217,9 +217,7 @@
     N = s;
     if (s.phase === 'lobby') {
       if (G) { G = null; clearTimeout(overT); }
-      const me = s.players.findIndex(p => p.id === s.meId);
-      const others = s.players.map((p, i) => ({ id: p.id, char: i % CHARS.length })).filter(p => p.id !== s.meId);
-      west.field(Math.max(0, me) % CHARS.length, others, { instant: !prev || prev.phase !== 'lobby' ? false : false });
+      west.board(s.players.map((p, i) => ({ id: p.id, name: p.name, char: i % CHARS.length, me: p.id === s.meId, host: p.id === s.hostId, bot: p.bot })));
       renderLobby();
       view('lobby');
       return;
@@ -239,18 +237,21 @@
     const s = N;
     const host = s.hostId === s.meId;
     $('#roomCode').textContent = s.code;
-    $('#plist').innerHTML = s.players.map((p, i) => `
-      <li style="${p.connected ? '' : 'opacity:.5'}">
-        <span>${esc(p.name)}${p.id === s.meId ? ' <small>(나)</small>' : ''}</span>
-        <em>${CHARS[i % CHARS.length].ko}${p.id === s.hostId ? ' · 방장' : p.bot ? ' · 봇' : ''}</em>
-        ${host && p.id !== s.meId ? `<button class="kick" data-id="${p.id}" aria-label="내보내기">✕</button>` : ''}
-      </li>`).join('');
-    document.querySelectorAll('#cfgRow select').forEach(sel => { sel.value = String(s.cfg[sel.dataset.cfg]); sel.disabled = !host; });
-    $('#botRow').hidden = !host || s.players.length >= R.MAX_PLAYERS.west;
+    document.querySelectorAll('#hostOpts select[data-cfg]').forEach(sel => { sel.value = String(s.cfg[sel.dataset.cfg]); });
+    $('#hostOpts').hidden = !host;
+    $('#addBotBtn').hidden = $('#addBotLv').hidden = s.players.length >= R.MAX_PLAYERS.west;
     $('#startBtn').disabled = !host;
     $('#startBtn').textContent = host ? '결투 시작' : '방장을 기다리는 중';
     $('#lobbyErr').textContent = '';
   }
+
+  // 방장이 다른 사람 수배서를 누르면 내보낸다
+  $('#scene').addEventListener('click', e => {
+    if (document.body.dataset.view !== 'lobby' || !N || N.hostId !== N.meId) return;
+    const id = west.posterAt(e.clientX, e.clientY);
+    const p = N.players.find(x => x.id === id);
+    if (p && p.id !== N.meId && confirm(`${p.name} 을(를) 내보낼까요?`)) wsSend({ t: 'kick', id });
+  });
 
   /* ─────────────────────── 단추 ─────────────────────── */
 
@@ -278,9 +279,8 @@
     const url = `${location.origin}/?room=${N.code}`;
     try { await navigator.clipboard.writeText(url); toast('초대 링크를 복사했어요.'); } catch (_) { toast(url, 5000); }
   });
-  $('#plist').addEventListener('click', e => { const b = e.target.closest('.kick'); if (b) wsSend({ t: 'kick', id: Number(b.dataset.id) }); });
   $('#addBotBtn').addEventListener('click', () => wsSend({ t: 'addBot', level: $('#addBotLv').value }));
-  document.querySelectorAll('#cfgRow select').forEach(sel => sel.addEventListener('change', () => {
+  document.querySelectorAll('#hostOpts select[data-cfg]').forEach(sel => sel.addEventListener('change', () => {
     const v = sel.dataset.cfg === 'target' ? Number(sel.value) : sel.value;
     wsSend({ t: 'cfg', cfg: { [sel.dataset.cfg]: v } });
   }));

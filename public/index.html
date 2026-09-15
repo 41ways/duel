@@ -8,7 +8,7 @@
 <meta name="theme-color" content="#1a120c">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Rye&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Hahmlet:wght@700;900&family=Nanum+Pen+Script&display=swap">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <link rel="stylesheet" href="/style.css">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤠</text></svg>">
@@ -55,24 +55,21 @@
   </div>
 </section>
 
-<!-- 대기실 -->
+<!-- 대기실 — 수배서 벽은 캔버스가 그린다. 여기는 아래 단추 줄만 -->
 <section id="lobby" class="view">
-  <div class="poster">
-    <div class="row between">
-      <div><small>방 코드</small><div class="code" id="roomCode">----</div></div>
+  <div class="bar">
+    <div class="code-box">
+      <small>방 코드</small><b class="code" id="roomCode">----</b>
       <button class="btn slim" id="copyBtn">초대 링크 복사</button>
     </div>
-    <ul class="list" id="plist"></ul>
-    <div class="row" id="botRow">
+    <div class="opts" id="hostOpts">
       <button class="btn slim" id="addBotBtn">+ 봇</button>
       <select id="addBotLv"><option value="easy">쉬움</option><option value="normal" selected>보통</option><option value="hard">어려움</option></select>
+      <select data-cfg="target"><option value="1">단판</option><option value="3">3선승</option><option value="5">5선승</option></select>
+      <select data-cfg="signal"><option value="mix">신호: 화면</option><option value="sound">신호: 소리만</option></select>
     </div>
-    <div class="row small" id="cfgRow">
-      <label>판 <select data-cfg="target"><option value="1">단판</option><option value="3">3선승</option><option value="5">5선승</option></select></label>
-      <label>신호 <select data-cfg="signal"><option value="mix">화면</option><option value="sound">소리만</option></select></label>
-    </div>
-    <p class="err" id="lobbyErr"></p>
-    <div class="row">
+    <span class="err" id="lobbyErr"></span>
+    <div class="go">
       <button class="btn" id="leaveBtn">나가기</button>
       <button class="btn primary" id="startBtn">결투 시작</button>
     </div>

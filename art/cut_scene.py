@@ -78,34 +78,22 @@ cv2.fillPoly(far, [np.array([(920, 236), (992, 236), (996, 280), (1012, 300), (1
 cv2.ellipse(far, (862, 515), (140, 17), 0, 0, 360, 1, -1)
 
 
-def fill_rows(img, mask, dx, grow=9):
-    """가는 물체 지우기. 줄마다 구멍 양 끝 색을 이어 밑색을 깔고, dx 옆 조각의 결(고주파)만 얹는다.
-    밝기는 양옆에서 오니 띠가 생기지 않는다."""
+def fill_rows(img, mask, dx, grow=15):
+    """가는 물체 지우기. 밑색은 둘레에서 안쪽으로 번져 들어오게(인페인트) 깔고,
+    dx 옆 조각의 결(흙 갈라짐)만 얹는다."""
     m = cv2.dilate(mask.astype(np.uint8), np.ones((grow, grow), np.uint8))
     f = img.astype(np.float32)
+    # 작게 줄여 인페인트하면 넓게 매끄럽다
+    sm = cv2.resize(img, None, fx=0.25, fy=0.25, interpolation=cv2.INTER_AREA)
+    msm = cv2.dilate(cv2.resize(m, (sm.shape[1], sm.shape[0]), interpolation=cv2.INTER_NEAREST), np.ones((3, 3), np.uint8))
+    base = cv2.inpaint(sm, msm, 6, cv2.INPAINT_TELEA)
+    base = cv2.resize(base, (img.shape[1], img.shape[0]), interpolation=cv2.INTER_CUBIC).astype(np.float32)
+    base = cv2.GaussianBlur(base, (0, 0), 3)
     donor = np.roll(f, -dx, axis=1)
-    detail = donor - cv2.GaussianBlur(donor, (0, 0), 5)
-    smooth = cv2.GaussianBlur(f, (0, 0), 2)
-    out = f.copy()
-    for y in range(img.shape[0]):
-        xs = np.where(m[y])[0]
-        if not len(xs):
-            continue
-        # 한 줄에 구멍이 여러 조각일 수 있다
-        runs = np.split(xs, np.where(np.diff(xs) > 1)[0] + 1)
-        for r in runs:
-            x0, x1 = r[0] - 1, r[-1] + 1
-            if x0 < 3 or x1 > img.shape[1] - 4:
-                continue
-            L = smooth[y, x0 - 3:x0 + 1].mean(axis=0)
-            R = smooth[y, x1:x1 + 4].mean(axis=0)
-            t = ((np.arange(x0 + 1, x1) - x0) / (x1 - x0))[:, None]
-            out[y, x0 + 1:x1] = L * (1 - t) + R * t + detail[y, x0 + 1:x1]
-    # 줄 사이 튐 줄이기 — 구멍 안만 세로로 살짝
-    v = cv2.GaussianBlur(out, (1, 0), sigmaX=0.1, sigmaY=1.2)
-    mm = cv2.GaussianBlur(m.astype(np.float32), (0, 0), 1.5)[..., None]
-    out = out * (1 - mm * 0.5) + v * (mm * 0.5)
-    return np.clip(out, 0, 255).astype(np.uint8)
+    detail = donor - cv2.GaussianBlur(donor, (0, 0), 12)
+    fill = base + detail
+    soft = np.clip(cv2.GaussianBlur(m.astype(np.float32), (0, 0), 5) * 1.6, 0, 1)[..., None]
+    return np.clip(f * (1 - soft) + fill * soft, 0, 255).astype(np.uint8)
 
 
 def fill_left(img, mask, dx):

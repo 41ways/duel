@@ -2,6 +2,7 @@
 westernduelistback.png(흰 배경 뒷모습) → 앞사람과 총 드는 팔, 멀리 선 사람 색 맞추기.
   public/img/back.png      — 오른팔(화면 오른쪽) 아래팔을 뺀 몸
   public/img/back_arm.png  — 오른 아래팔 · 손 (팔꿈치가 위 가운데)
+  public/img/back_down.png · back_dead.png — 무릎 꿇은 · 앞으로 쓰러진 뒷모습
   public/img/gunN_far.png  — 멀리 서 있을 때 쓰는 전신 (크기 줄이고 대기 색에 묻힘)
 
   python art/cut_back.py   (opencv-python-headless · numpy 필요)
@@ -68,6 +69,13 @@ arm_c = arm[EY - 20:EY + 180, EX - 60:EX + 60]
 cv2.imwrite(os.path.join(OUT, 'back_arm.png'), arm_c)
 print('back.png', body_t.shape[1], 'x', body_t.shape[0], 'offset', (bx, by), '| elbow in back.png', (EX - bx, EY - by),
       '| arm crop origin', (EX - 60 - bx, EY - 20 - by))
+
+# ── 무릎 꿇음 · 쓰러짐 (뒷모습) ──
+for name, out in [('westdueldown.png', 'back_down.png'), ('westdueldead.png', 'back_dead.png')]:
+    im = cv2.imread(os.path.join(HERE, name), cv2.IMREAD_COLOR)
+    t_, off = trim(white_matte(im))
+    cv2.imwrite(os.path.join(OUT, out), t_)
+    print(out, t_.shape[1], 'x', t_.shape[0], 'offset', off)
 
 # ── 멀리 선 사람: 사진 속 먼 사람처럼 작고, 대비 낮고, 따뜻한 먼지 빛 ──
 for i in range(1, 5):

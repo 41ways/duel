@@ -1,5 +1,5 @@
 """
-westernduelists.png 에서 총잡이 넷을 오려 낸다.
+westduelists.png 에서 총잡이 넷을 오려 낸다.
   public/img/gun{1..4}.png       — 전신 (멀리 서 있는 모습)
   public/img/gun{1..4}_bust.png  — 가슴 위 (선수 소개)
 
@@ -14,7 +14,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, '..', 'public', 'img')
 os.makedirs(OUT, exist_ok=True)
 
-src = cv2.imread(os.path.join(HERE, 'westernduelists.png'), cv2.IMREAD_COLOR)
+src = cv2.imread(os.path.join(HERE, 'westduelists.png'), cv2.IMREAD_COLOR)
 H, W = src.shape[:2]
 
 # 사람마다 x 범위(넉넉히)와 가슴선 y
