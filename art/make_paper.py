@@ -110,3 +110,15 @@ ink = np.clip(ink * 1.3, 0, 1)
 stroke = np.dstack([np.full((H2, W2), 18, np.uint8), np.full((H2, W2), 16, np.uint8), np.full((H2, W2), 20, np.uint8), (ink * 255).astype(np.uint8)])
 cv2.imwrite(os.path.join(OUT, 'ink_stroke.png'), stroke)
 print('ink_stroke.png')
+
+# ── 인쇄 번짐 마스크: 나무 활자로 찍은 듯 군데군데 잉크가 빠진 알파 ──
+G = 512
+speck = rng.random((G, G)).astype(np.float32)
+blob = fractal(G, G, octaves=4, persistence=0.5)
+a = np.ones((G, G), np.float32)
+a -= (speck > 0.985) * 0.9                          # 잔 구멍
+a -= np.clip((blob - 0.62) * 4, 0, 1) * 0.55        # 넓게 옅어진 곳
+a = cv2.GaussianBlur(np.clip(a, 0, 1), (0, 0), 0.6)
+mask = np.dstack([np.zeros((G, G, 3), np.uint8), (a * 255).astype(np.uint8)])
+cv2.imwrite(os.path.join(OUT, 'grunge.png'), mask)
+print('grunge.png')

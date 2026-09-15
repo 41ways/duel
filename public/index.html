@@ -32,30 +32,19 @@
   <button class="btn primary big" id="startGameBtn">게임 시작</button>
 </section>
 
-<!-- 처음 — 현상수배서 한 장 -->
+<!-- 처음 — 빈 수배서 한 장에 이름을 적고 방을 만든다 -->
 <section id="home" class="view">
-  <div class="poster">
-    <p class="orn">DEAD OR ALIVE</p>
-    <h2>결투</h2>
-    <p class="sub">STANDOFF</p>
-    <p class="how">멀리 선 상대를 노려보다 <b>지금!</b>이 뜨면 쏜다.<br>먼저 쏜 자가 산다. 그 전에 쏘면 오발.</p>
-    <label class="field"><span>NAME</span><input id="nameIn" maxlength="10" placeholder="이름" autocomplete="off"></label>
+  <button class="back" id="backSelect">☜ 방식 다시 고르기</button>
+  <div class="sheet">
+    <label class="field"><span>NAME</span><input id="nameIn" maxlength="10" placeholder="이름을 적으세요" autocomplete="off"></label>
     <button class="btn primary" id="createBtn">방 만들기</button>
-    <div class="row">
+    <p class="or">OR</p>
+    <div class="joinrow">
       <label class="field"><span>No.</span><input id="codeIn" maxlength="4" placeholder="방 코드" autocomplete="off" autocapitalize="characters"></label>
       <button class="btn" id="joinBtn">들어가기</button>
     </div>
-    <p class="rule"><span>OR</span></p>
-    <div class="row">
-      <button class="btn" id="soloBtn">봇이랑 연습</button>
-      <button class="btn" id="pairBtn">한 기기 둘이</button>
-    </div>
-    <div class="row small">
-      <label>봇 <select id="botN"><option>1</option><option>2</option><option>3</option></select>명</label>
-      <label>실력 <select id="botLv"><option value="easy">쉬움</option><option value="normal" selected>보통</option><option value="hard">어려움</option></select></label>
-    </div>
+    <button class="link" id="pairBtn">☞ 한 기기로 둘이 하기</button>
     <p class="err" id="homeErr"></p>
-    <p class="banner">REPORT TO THE SHERIFF</p>
   </div>
 </section>
 
@@ -70,16 +59,19 @@
   </div>
 </section>
 
-<!-- 대기실 — 수배서 벽은 캔버스가 그린다. 여기는 아래 단추 줄만 -->
+<!-- 대기실 — 수배서 벽은 캔버스가 그린다. 여기는 아래 띠 · 자리 메뉴 · 채팅 -->
 <section id="lobby" class="view">
+  <div class="slotmenu" id="slotMenu"><p class="sm-title" id="smTitle"></p><div class="sm-body" id="smBody"></div></div>
+  <div class="chat" id="chat">
+    <ol id="chatLog"></ol>
+    <form id="chatForm" autocomplete="off"><input id="chatIn" maxlength="120" placeholder="한마디"><button class="btn slim">보내기</button></form>
+  </div>
   <div class="bar">
     <div class="code-box">
-      <small>방 코드</small><b class="code" id="roomCode">----</b>
+      <small>ROOM No.</small><b class="code" id="roomCode">----</b>
       <button class="btn slim" id="copyBtn">초대 링크 복사</button>
     </div>
     <div class="opts" id="hostOpts">
-      <button class="btn slim" id="addBotBtn">+ 봇</button>
-      <select id="addBotLv"><option value="easy">쉬움</option><option value="normal" selected>보통</option><option value="hard">어려움</option></select>
       <select data-cfg="target"><option value="1">단판</option><option value="3">3선승</option><option value="5">5선승</option></select>
       <select data-cfg="signal"><option value="mix">신호: 화면</option><option value="sound">신호: 소리만</option></select>
       <select data-cfg="decoys"><option value="true">거짓 신호 포함</option><option value="false">거짓 신호 없음</option></select>

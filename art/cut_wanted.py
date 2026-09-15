@@ -54,3 +54,33 @@ left = src[:, 0:410]
 wall = np.hstack([left, left[:, ::-1], left, left[:, ::-1]])
 cv2.imwrite(os.path.join(OUT, 'wood.jpg'), wall, [cv2.IMWRITE_JPEG_QUALITY, 84])
 print('wood.jpg', wall.shape[1], 'x', wall.shape[0])
+
+# ── 빈 수배서: 맨 위 WANTED 와 테두리만 남기고 속을 종이로 채운다 ──
+# 화면이 사진 · DEAD OR ALIVE · 이름을 그 위에 새로 올린다
+post = cv2.imread(os.path.join(OUT, 'poster.png'), cv2.IMREAD_UNCHANGED)
+ph, pw = post.shape[:2]
+rgb = post[:, :, :3].copy()
+X0, X1, Y0, Y1 = 44, pw - 44, 130, ph - 41
+region = np.zeros((ph, pw), np.uint8)
+region[Y0:Y1, X0:X1] = 1
+gray = cv2.cvtColor(rgb, cv2.COLOR_BGR2GRAY)
+text = (gray < 150).astype(np.uint8)        # 글자 전부(WANTED 포함)를 빼고 밑색을 구해야 번지지 않는다
+text = cv2.dilate(text, np.ones((9, 9), np.uint8))
+# 밑색: 줄여서 인페인트 → 넓고 매끄럽게
+sm = cv2.resize(rgb, (pw // 4, ph // 4), interpolation=cv2.INTER_AREA)
+msm = cv2.dilate(cv2.resize(text, (pw // 4, ph // 4), interpolation=cv2.INTER_NEAREST), np.ones((3, 3), np.uint8))
+tone = cv2.inpaint(sm, msm, 5, cv2.INPAINT_TELEA)
+tone = cv2.GaussianBlur(cv2.resize(tone, (pw, ph), interpolation=cv2.INTER_CUBIC).astype(np.float32), (0, 0), 6)
+# 결: 깨끗한 종이 조각의 고주파를 뒤집어 가며 이어 붙인다
+patch = rgb[195:395, 125:455].astype(np.float32)
+hp = patch - cv2.GaussianBlur(patch, (0, 0), 8)
+tile = np.vstack([np.hstack([hp, hp[:, ::-1]]), np.hstack([hp[::-1], hp[::-1, ::-1]])])
+reps = (int(np.ceil(ph / tile.shape[0])) + 1, int(np.ceil(pw / tile.shape[1])) + 1, 1)
+grain = np.tile(tile, reps)[:ph, :pw]
+fill = np.clip(tone + grain * 0.7, 0, 255)
+soft = cv2.GaussianBlur(region.astype(np.float32), (0, 0), 2.5)[..., None]
+out = rgb.astype(np.float32) * (1 - soft) + fill * soft
+blank = post.copy()
+blank[:, :, :3] = np.clip(out, 0, 255).astype(np.uint8)
+cv2.imwrite(os.path.join(OUT, 'poster_blank.png'), blank)
+print('poster_blank.png', pw, 'x', ph)

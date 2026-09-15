@@ -43,7 +43,7 @@ async function check(name, fn) {
   await check('화면 파일 · 이미지', async () => {
     const html = await fetch(BASE + '/').then(r => r.text());
     assert.ok(html.includes('결투'));
-    for (const f of ['/style.css', '/duel.js', '/west.js', '/app.js', '/sound.js', '/img/plate.jpg', '/img/back.png', '/img/back_arm.png', '/img/gun1_far.png', '/img/gun4_bust.png', '/img/poster.png', '/img/wood.jpg', '/img/back_down.png', '/img/back_dead.png', '/img/mode_west_bg.jpg', '/img/mode_samurai_man.png']) {
+    for (const f of ['/style.css', '/duel.js', '/west.js', '/app.js', '/sound.js', '/img/plate.jpg', '/img/back.png', '/img/back_arm.png', '/img/gun1_far.png', '/img/gun4_bust.png', '/img/poster.png', '/img/wood.jpg', '/img/back_down.png', '/img/back_dead.png', '/img/poster_blank.png', '/img/grunge.png', '/img/mode_west_bg.jpg', '/img/mode_samurai_man.png']) {
       assert.strictEqual((await fetch(BASE + f)).status, 200, f);
     }
   });
@@ -59,6 +59,20 @@ async function check(name, fn) {
     await waitFor(a, m => m.t === 'state' && m.players.length === 3);
     tx(a, { t: 'start' });
     await waitFor(b, m => m.t === 'ev' && m.ev.k === 'round', 5000, 'round');
+  });
+
+  await check('채팅 · 방장 넘기기', async () => {
+    const c = await open(), d = await open();
+    tx(c, { t: 'create', name: '방장' });
+    const { code } = await waitFor(c, m => m.t === 'joined');
+    tx(d, { t: 'join', code, name: '손님' });
+    const st = await waitFor(c, m => m.t === 'state' && m.players.length === 2);
+    tx(d, { t: 'chat', text: '안녕' });
+    await waitFor(c, m => m.t === 'chat' && m.text === '안녕' && m.name === '손님');
+    const guest = st.players.find(p => p.name === '손님');
+    tx(c, { t: 'host', id: guest.id });
+    await waitFor(d, m => m.t === 'state' && m.hostId === guest.id);
+    for (const w of [c, d]) { tx(w, { t: 'leave' }); w.close(); }
   });
 
   await check('신호 → 쏘기 → 판정', async () => {

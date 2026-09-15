@@ -21,84 +21,108 @@ body[data-view="game"] #quitBtn, body[data-view="lobby"] #quitBtn, body[data-vie
 
 .view { position: fixed; inset: 0; z-index: 3; display: none; padding: 60px 16px 24px; align-items: center; justify-content: flex-end; flex-direction: column; overflow-y: auto; }
 body[data-view="title"] #title, body[data-view="home"] #home, body[data-view="lobby"] #lobby, body[data-view="over"] #over, body[data-view="soon"] #soon { display: flex; }
-#title { padding-bottom: 14vh; }
+#title { padding-bottom: 7vh; }
 #startGameBtn { opacity: 0; transition: opacity .6s, transform .15s; }
 .ready #startGameBtn { opacity: 1; }
 
 /* ───────── 종이 ───────── */
-.poster, .result {
+.result {
   border: 34px solid transparent;
   border-image: url(/img/paper_panel.png) 70 fill / 34px stretch;
   filter: drop-shadow(0 18px 40px #000c);
 }
 
-/* ───────── 단추 — 나무 활자 표 ───────── */
+/* ───────── 단추 — 나무 활자로 찍은 잉크 ───────── */
 .btn {
-  position: relative; padding: 10px 14px; cursor: pointer;
-  font: 900 16px var(--kr); letter-spacing: .02em;
+  position: relative; padding: 10px 16px; cursor: pointer;
+  font: 900 17px var(--kr); letter-spacing: .03em;
   color: var(--ink); background: #0000;
-  border: 2px solid var(--ink); border-radius: 2px;
-  box-shadow: inset 0 0 0 3px var(--paper), inset 0 0 0 4px var(--ink-soft);
-  transition: transform .08s, background .15s;
+  border: 3px solid var(--ink); border-radius: 0;
+  -webkit-mask: url(/img/grunge.png) 0 0 / 220px; mask: url(/img/grunge.png) 0 0 / 220px;
+  transition: transform .1s, background .15s, color .15s;
 }
-.btn:hover { background: #3b241414; }
-.btn:hover::before { content: "☞"; position: absolute; left: -26px; top: 50%; transform: translateY(-52%); font-size: 20px; color: var(--ink); }
+.btn:hover { background: var(--ink); color: var(--paper-hi); }
 .btn:active { transform: translateY(1px); }
-.btn:disabled { opacity: .5; cursor: default; }
-.btn:disabled::before { content: none; }
-.btn.primary {
-  color: var(--paper-hi); background: var(--red); border-color: #2a0f08;
-  box-shadow: inset 0 0 0 3px var(--red), inset 0 0 0 4px #efd9a8aa;
-  font-size: 19px;
-}
-.btn.primary:hover { background: #a3321f; }
-.btn.big { padding: 14px 40px; font-size: 24px; }
-.btn.slim { padding: 6px 10px; font-size: 13px; }
-#startGameBtn.big { padding: 14px 46px; }
-#startGameBtn::before { content: none; }
+.btn:disabled { opacity: .45; cursor: default; background: #0000; color: var(--ink); }
+.btn.primary { color: var(--paper-hi); background: var(--red); border-color: var(--red); font-size: 20px; }
+.btn.primary:hover { background: #6e1f13; border-color: #6e1f13; }
+.btn.big { padding: 14px 44px; font-size: 24px; }
+.btn.slim { padding: 5px 10px; font-size: 13px; border-width: 2px; }
+#startGameBtn { -webkit-mask: none; mask: none; box-shadow: 0 10px 30px #000a; }
 #startGameBtn:hover { transform: scale(1.05); }
+.back { position: fixed; left: 76px; top: 12px; z-index: 6; border: 0; cursor: pointer; padding: 8px 14px; background: #24160ce0; color: var(--paper); font: 900 14px var(--kr); clip-path: polygon(10px 0, 100% 0, 100% 100%, 10px 100%, 0 50%); }
+.back:hover { background: var(--red); }
+.link { border: 0; background: #0000; cursor: pointer; font: 700 14px var(--kr); color: var(--ink); opacity: .8; }
+.link:hover { opacity: 1; text-decoration: underline; }
 
-/* ───────── 처음 — 수배서 ───────── */
-#home { align-items: flex-start; justify-content: center; padding-left: max(16px, 5vw); }
-.poster { width: min(390px, 100%); display: grid; gap: 10px; text-align: center; }
-.poster .orn { margin: 0; font: 15px var(--slab); letter-spacing: .22em; display: flex; align-items: center; gap: 10px; }
-.poster .orn::before, .poster .orn::after { content: ""; flex: 1; border-top: 2px solid var(--ink); border-bottom: 1px solid var(--ink); height: 5px; }
-.poster h2 { margin: -4px 0 0; font: 900 64px/1 var(--kr); color: var(--ink); letter-spacing: .08em; }
-.poster .sub { margin: -4px 0 2px; font: 26px var(--wood); color: var(--red); letter-spacing: .12em; }
-.poster .sub::before, .poster .sub::after { content: "★"; font-size: 15px; vertical-align: 5px; margin: 0 10px; }
-.how { margin: 0 0 4px; font-size: 13.5px; line-height: 1.6; font-weight: 600; }
-.how b { color: var(--red); }
+/* ───────── 처음 — 빈 수배서 한 장 ───────── */
+#home { align-items: flex-start; justify-content: center; padding-left: max(16px, 6vw); }
+.sheet {
+  width: min(420px, 46vw, calc((100vh - 110px) * .773)); aspect-ratio: 576 / 745;
+  background: url(/img/poster_blank.png) center / 100% 100% no-repeat;
+  filter: drop-shadow(0 22px 40px #000c);
+  padding: 25% 13% 9%;
+  display: flex; flex-direction: column; justify-content: center; gap: 12px; text-align: center;
+  animation: pin .5s cubic-bezier(.2,1.4,.4,1) both;
+}
 .field { display: flex; align-items: baseline; gap: 8px; border-bottom: 2px dotted var(--ink); text-align: left; }
-.field span { font: 13px var(--slab); letter-spacing: .06em; }
-.field input { flex: 1; min-width: 0; border: 0; background: #0000; padding: 6px 2px; outline: none; font: 22px "Nanum Pen Script", cursive; color: #1f2946; user-select: text; }
-.field input::placeholder { color: #3b241466; }
+.field span { font: 14px var(--slab); letter-spacing: .06em; }
+.field input { flex: 1; min-width: 0; border: 0; background: #0000; padding: 4px 2px; outline: none; font: 26px "Nanum Pen Script", cursive; color: #1f2946; user-select: text; }
+.field input::placeholder { color: #3b241455; }
+.or { margin: 2px 0; display: flex; align-items: center; gap: 10px; font: 15px var(--wood); letter-spacing: .2em; color: var(--red); }
+.or::before, .or::after { content: ""; flex: 1; border-top: 2px solid var(--ink); border-bottom: 1px solid var(--ink); height: 4px; }
+.joinrow { display: flex; gap: 10px; align-items: flex-end; }
+.joinrow .field { flex: 1; min-width: 0; }
 .row { display: flex; gap: 10px; align-items: center; }
 .row > * { flex: 1; min-width: 0; }
-.poster .row { flex-wrap: wrap; }
-.rule { margin: 4px 0; display: flex; align-items: center; gap: 10px; font: 12px var(--slab); letter-spacing: .2em; }
-.rule::before, .rule::after { content: ""; flex: 1; border-top: 1px dashed var(--ink-soft); }
 .small { font-size: 13px; font-weight: 700; }
-.small select, .bar select { border: 0; border-bottom: 1px solid currentColor; background: #0000; padding: 3px 2px; margin: 0 4px; outline: none; font-weight: 700; }
-.banner { margin: 6px -8px 0; padding: 7px 18px; background: var(--ink); color: var(--paper); font: 12px var(--slab); letter-spacing: .14em; clip-path: polygon(10px 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 10px 100%, 0 50%); }
+.bar select { border: 0; border-bottom: 1px solid currentColor; background: #0000; padding: 3px 2px; margin: 0 4px; outline: none; font-weight: 700; }
 .err { margin: 0; color: var(--red); font-weight: 800; font-size: 13px; min-height: 1em; }
 small { font-size: 12px; opacity: .7; font-weight: 700; }
+@keyframes pin { from { opacity: 0; transform: translateY(-30px) rotate(-3deg); } }
 
-/* ───────── 대기방 — 먹색 띠 ───────── */
+/* ───────── 대기방 — 먹색 띠 · 자리 메뉴 · 채팅 ───────── */
 #lobby { padding: 0 0 12px; align-items: stretch; justify-content: flex-end; pointer-events: none; }
 .bar {
   pointer-events: auto; margin: 0 12px; display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; justify-content: space-between;
-  padding: 12px 34px; color: var(--paper); background: #24160ce8;
-  box-shadow: inset 0 0 0 2px #24160c, inset 0 0 0 3px #e2c48c88;
-  clip-path: polygon(18px 0, calc(100% - 18px) 0, 100% 50%, calc(100% - 18px) 100%, 18px 100%, 0 50%);
+  padding: 12px 38px; color: var(--paper); background: #24160cee;
+  clip-path: polygon(20px 0, calc(100% - 20px) 0, 100% 50%, calc(100% - 20px) 100%, 20px 100%, 0 50%);
 }
-.bar .btn { color: var(--paper); border-color: var(--paper); box-shadow: inset 0 0 0 3px #24160c, inset 0 0 0 4px #e2c48c88; }
-.bar .btn:hover::before { color: var(--paper); }
-.bar .btn.primary { box-shadow: inset 0 0 0 3px var(--red), inset 0 0 0 4px #efd9a8aa; border-color: #120804; }
+.bar .btn { color: var(--paper); border-color: var(--paper); }
+.bar .btn:hover { background: var(--paper); color: var(--ink); }
+.bar .btn.primary { border-color: var(--red); color: var(--paper-hi); }
+.bar .btn.primary:hover { background: #6e1f13; color: var(--paper-hi); }
 .bar select option { color: #222; }
 .code-box, .opts, .go { display: flex; gap: 12px; align-items: center; }
 .bar small { font: 11px var(--slab); letter-spacing: .15em; opacity: .75; }
 .code { font: 30px/1 var(--wood); letter-spacing: .12em; color: var(--paper-hi); }
 .bar .err { color: #ffb08a; }
+
+.slotmenu {
+  position: fixed; z-index: 6; pointer-events: auto; display: grid; gap: 8px; padding: 0 12px;
+  background: var(--paper); color: var(--ink); border: 3px solid var(--ink);
+  box-shadow: 0 14px 30px #000b;
+  max-height: 0; overflow: hidden; opacity: 0; visibility: hidden;
+  transition: max-height .3s cubic-bezier(.2,.8,.2,1), opacity .2s, padding .3s, visibility 0s .3s;
+}
+.slotmenu.open { max-height: 260px; opacity: 1; visibility: visible; padding: 10px 12px 12px; transition: max-height .35s cubic-bezier(.2,.8,.2,1), opacity .2s, padding .3s; }
+.sm-title { margin: 0; font: 900 18px var(--kr); text-align: center; border-bottom: 2px solid var(--ink); padding-bottom: 6px; }
+.sm-body { display: grid; gap: 6px; }
+.sm-body .btn { font-size: 16px; padding: 8px; }
+
+.chat {
+  position: fixed; right: 24px; bottom: 84px; z-index: 5; pointer-events: auto;
+  width: min(300px, calc(100% - 32px)); display: grid; gap: 6px;
+  background: #1a100ad9; color: var(--paper); padding: 10px; border-top: 3px solid var(--paper);
+}
+#chatLog { list-style: none; margin: 0; padding: 0; max-height: 160px; overflow-y: auto; display: grid; gap: 3px; font-size: 13.5px; user-select: text; }
+#chatLog li b { font: 12px var(--slab); color: #e0b35e; margin-right: 6px; letter-spacing: .03em; }
+#chatLog li.me b { color: #ffb08a; }
+#chatLog li.sys { font-style: italic; opacity: .7; }
+#chatForm { display: flex; gap: 6px; }
+#chatIn { flex: 1; min-width: 0; border: 0; border-bottom: 1px solid #e2c48c88; background: #0000; color: var(--paper); padding: 5px 2px; outline: none; user-select: text; }
+.chat .btn { color: var(--paper); border-color: var(--paper); }
+.chat .btn:hover { background: var(--paper); color: var(--ink); }
 
 /* ───────── 결과 — 현상금 공고 ───────── */
 #over { align-items: center; justify-content: center; background: radial-gradient(ellipse at center, #0000 20%, #000b 100%); }
@@ -148,8 +172,9 @@ small { font-size: 12px; opacity: .7; font-weight: 700; }
 
 @media (max-width: 700px) {
   #home { align-items: center; padding-left: 16px; }
-  .poster, .result { border-width: 24px; }
+  .sheet { width: min(380px, 92vw, calc((100vh - 90px) * .773)); }
+  .chat { bottom: 200px; }
+  .result { border-width: 24px; }
   .brush { font-size: 84px; }
-  .poster h2 { font-size: 52px; }
   .bar { padding: 12px 28px; }
 }

@@ -71,7 +71,7 @@
     }
 
     async loadAll() {
-      const names = ['plate.jpg', 'back.png', 'back_arm.png', 'back_down.png', 'back_dead.png', 'weed.png', 'low.jpg', 'poster.png', 'wood.jpg', 'mode_west_bg.jpg', 'mode_west_man.png', 'mode_samurai_bg.jpg', 'mode_samurai_man.png',
+      const names = ['plate.jpg', 'back.png', 'back_arm.png', 'back_down.png', 'back_dead.png', 'weed.png', 'low.jpg', 'poster_blank.png', 'wood.jpg', 'ink_stroke.png', 'mode_west_bg.jpg', 'mode_west_man.png', 'mode_samurai_bg.jpg', 'mode_samurai_man.png',
         ...CHARS.flatMap(c => [`${c.key}.png`, `${c.key}_far.png`, `${c.key}_bust.png`])];
       const imgs = await Promise.all(names.map(n => load('/img/' + n)));
       names.forEach((n, i) => { this.img[n.replace(/\.\w+$/, '')] = imgs[i]; });
@@ -371,6 +371,7 @@
         case 'title': this.drawTitle(t); break;
         case 'select': this.drawSelect(t); break;
         case 'board': this.drawBoard(t); break;
+        case 'westhome': this.drawWestHome(t); break;
         case 'field': this.drawField(t); break;
         case 'versus': this.drawVersus(t); break;
         case 'duel': this.drawDuel(t); break;
@@ -378,7 +379,7 @@
         case 'reveal': this.drawReveal(t); break;
       }
       ctx.restore();
-      if (!['versus', 'black', 'title', 'board', 'select'].includes(this.view)) this.drawGrade(t);
+      if (!['versus', 'black', 'title', 'board', 'select', 'westhome'].includes(this.view)) this.drawGrade(t);
       this.drawFlashes(t);
       this.drawTexts(t);
       this.drawWipe(t);
@@ -395,7 +396,7 @@
       const { ctx, W, H } = this;
       const a = t - this.viewAt;
       const S1 = 350, S2 = 1050, SL = 1750, CL = 2500;
-      const cx = W / 2, cy = H * 0.42;
+      const cx = W / 2, cy = H * 0.36;
       const fs = Math.min(W * 0.3, H * 0.3);
       const ev = this._tev || (this._tev = {});
       const once = (k, at, fn) => { if (!ev[k] && a >= at) { ev[k] = true; fn(); } };
@@ -417,7 +418,7 @@
       }
       once('sl', SL, () => { this.S && this.S.slash(); this.shakeIt(240, 7); });
       once('cl', CL, () => {
-        this.S && this.S.clash();
+        this.S && this.S.thud(0.5); this.S && this.S.clink();
         this.shakeIt(320, 11);
         this.flashes.push({ at: t, dur: 140 });
         this.sparks = [];
@@ -425,7 +426,7 @@
           const ang = Math.random() * TAU;
           const sp = (0.3 + Math.random()) * fs * 3.2;
           const bp = this.btnCenter();
-          this.sparks.push({ x: bp.x, y: bp.y, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp, age: 0, life: 0.3 + Math.random() * 0.8 });
+          this.sparks.push({ x: bp.x, y: bp.y + bp.w * 0.12, vx: Math.cos(ang) * sp * 0.6, vy: Math.sin(ang) * sp * 0.6, age: 0, life: 0.25 + Math.random() * 0.6 });
         }
       });
       const dt = Math.min(0.05, (t - (this._tlast || t)) / 1000); this._tlast = t;
@@ -466,6 +467,8 @@
       const ux = Math.cos(cutAng), uy = Math.sin(cutAng);
       const shift = cut ? fs * lerp(0.26, 0.17, easeOut((a - SL - 100) / 500)) : 0;
       const textA = cut ? 1 : lit * 0.92;
+      // 먹 붓자국 시안은 글자 뒤에 깔린다
+      if ((this.cutStyle || 0) === 3 && a >= SL + 110) this.drawCutScar(3, easeOut((a - SL - 110) / 400), gapX, cy, ux, uy, fs, t);
       if (textA > 0.01) {
         ctx.globalAlpha = textA;
         const tg = ctx.createLinearGradient(0, cy - fs * 0.5, 0, cy + fs * 0.5);
@@ -477,20 +480,8 @@
       }
       ctx.restore();
 
-      // 벤 자국 — 글자 사이를 가로지르는 가는 선이 남는다
-      if (a >= SL + 110) {
-        const k = easeOut((a - SL - 110) / 400);
-        const reach = fs * 0.95;
-        ctx.save();
-        ctx.strokeStyle = `rgba(255,236,200,${0.55 * k})`;
-        ctx.lineWidth = Math.max(1, fs * 0.006);
-        ctx.shadowColor = 'rgba(255,220,160,.6)'; ctx.shadowBlur = 6;
-        ctx.beginPath();
-        ctx.moveTo(gapX - ux * reach, cy - uy * reach);
-        ctx.lineTo(gapX + ux * reach, cy + uy * reach);
-        ctx.stroke();
-        ctx.restore();
-      }
+      // 벤 자국 — 시안 다섯 가지 (this.cutStyle)
+      if (a >= SL + 110 && (this.cutStyle || 0) !== 3) this.drawCutScar(this.cutStyle || 0, easeOut((a - SL - 110) / 400), gapX, cy, ux, uy, fs, t);
       // 칼빛 — 결과 투 사이를 지나간다
       const sd = a - SL;
       if (sd >= 0 && sd < 560) {
@@ -562,6 +553,78 @@
       }
     }
 
+    /**
+     * 벤 자국 시안
+     *  0 선 없음 — 어긋난 글자만, 틈에 옅은 그림자
+     *  1 빛 실선 — 양 끝이 가늘어지는 금빛 한 줄
+     *  2 붉은 칼자국 — 끝이 날카롭게 빠지는 붉은 획, 핏방울 몇 개
+     *  3 먹 붓자국 — 글자 뒤로 마른 붓 한 획
+     *  4 화면이 갈라진 틈 — 화면 끝까지 이어지는 가는 틈과 어긋난 가장자리
+     */
+    drawCutScar(style, k, gx, gy, ux, uy, fs, t) {
+      const { ctx, W, H } = this;
+      const reach = fs * 1.05;
+      const A = { x: gx - ux * reach, y: gy - uy * reach }, B = { x: gx + ux * reach, y: gy + uy * reach };
+      const nx = -uy, ny = ux;
+      ctx.save();
+      if (style === 0) {
+        ctx.globalCompositeOperation = 'multiply';
+        const g = ctx.createLinearGradient(gx - nx * fs * 0.05, gy - ny * fs * 0.05, gx + nx * fs * 0.05, gy + ny * fs * 0.05);
+        g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(0.5, `rgba(0,0,0,${0.5 * k})`); g.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.moveTo(A.x - nx * fs * 0.05, A.y - ny * fs * 0.05); ctx.lineTo(B.x - nx * fs * 0.05, B.y - ny * fs * 0.05);
+        ctx.lineTo(B.x + nx * fs * 0.05, B.y + ny * fs * 0.05); ctx.lineTo(A.x + nx * fs * 0.05, A.y + ny * fs * 0.05);
+        ctx.fill();
+      } else if (style === 1) {
+        const w = fs * 0.014 * k;
+        ctx.fillStyle = '#f6dfae';
+        ctx.shadowColor = 'rgba(255,210,140,.8)'; ctx.shadowBlur = 10;
+        ctx.beginPath();
+        ctx.moveTo(A.x, A.y); ctx.lineTo(gx + nx * w, gy + ny * w); ctx.lineTo(B.x, B.y); ctx.lineTo(gx - nx * w, gy - ny * w);
+        ctx.closePath(); ctx.fill();
+      } else if (style === 2) {
+        const w = fs * 0.03 * k;
+        const g = ctx.createLinearGradient(A.x, A.y, B.x, B.y);
+        g.addColorStop(0, 'rgba(120,14,10,0)'); g.addColorStop(0.3, '#8e1a12'); g.addColorStop(0.55, '#b02518'); g.addColorStop(1, 'rgba(120,14,10,0)');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.moveTo(A.x, A.y); ctx.quadraticCurveTo(gx + nx * w, gy + ny * w, B.x, B.y); ctx.quadraticCurveTo(gx - nx * w * 0.4, gy - ny * w * 0.4, A.x, A.y);
+        ctx.fill();
+        ctx.fillStyle = '#9a1f14';
+        for (let i = 0; i < 5; i++) {
+          const f = 0.35 + i * 0.09, px = lerp(A.x, B.x, f) + nx * w, py = lerp(A.y, B.y, f) + ny * w;
+          const drip = fs * (0.03 + (i % 3) * 0.03) * easeOut((k - 0.3) / 0.7);
+          ctx.beginPath(); ctx.ellipse(px, py + drip, fs * 0.008, drip * 0.6 + 1, 0, 0, TAU); ctx.fill();
+        }
+      } else if (style === 3) {
+        const img = this.img.ink_stroke;
+        if (img) {
+          ctx.globalAlpha = 0.9 * k;
+          ctx.translate(gx, gy);
+          ctx.rotate(Math.atan2(uy, ux) + Math.PI);
+          const L = fs * 2.8 * lerp(0.6, 1, k), T = fs * 0.42;
+          ctx.filter = 'sepia(1) saturate(3) hue-rotate(-20deg) brightness(.55)';
+          ctx.drawImage(img, -L / 2, -T / 2, L, T);
+          ctx.filter = 'none';
+        }
+      } else if (style === 4) {
+        const far = Math.max(W, H);
+        const P = { x: gx - ux * far, y: gy - uy * far }, Q = { x: gx + ux * far, y: gy + uy * far };
+        ctx.strokeStyle = `rgba(0,0,0,${0.9 * k})`;
+        ctx.lineWidth = fs * 0.03;
+        ctx.beginPath(); ctx.moveTo(P.x, P.y); ctx.lineTo(Q.x, Q.y); ctx.stroke();
+        ctx.strokeStyle = `rgba(255,228,180,${0.7 * k})`;
+        ctx.lineWidth = 1.5;
+        for (const sgn of [-1, 1]) {
+          const o = fs * 0.015 * sgn;
+          ctx.beginPath(); ctx.moveTo(P.x + nx * o, P.y + ny * o); ctx.lineTo(Q.x + nx * o, Q.y + ny * o); ctx.stroke();
+        }
+      }
+      ctx.restore();
+      void t;
+    }
+
     /** 게임 시작 단추 가운데 (화면 좌표). app 이 btnRect 를 넣어 준다 */
     btnCenter() {
       const r = this.btnRect && this.btnRect();
@@ -578,41 +641,42 @@
     }
 
     drawTitleSwords(t, cd, fs) {
-      if (cd <= -260) return;
-      const { ctx } = this;
+      if (cd <= -240) return;
       const bp = this.btnCenter();
-      const L = Math.max(bp.w * 1.05, fs * 1.3);
-      const inP = easeIn((cd + 260) / 260);
-      const rec = cd > 0 ? Math.exp(-cd / 160) * Math.sin(cd / 45) * 0.08 : 0;
-      // 호버 — 0–130 벌어짐, 130–210 휘둘러 부딪힘, 그 뒤 살짝 떨림
+      const L = Math.max(bp.w * 0.62, fs * 0.7);
+      // 위에서 내리꽂힌다 — 0 에서 칼끝이 단추 아래에서 X 로 만난다
+      const stab = easeIn((cd + 240) / 240);
+      const rec = cd > 0 ? Math.exp(-cd / 150) * Math.sin(cd / 38) * 0.05 : 0;
       const h = this._hov || { on: false, at: -1e9, hit: true };
       const ha = t - h.at;
-      let swing = 0;
-      if (ha < 130) swing = -0.55 * easeOut(ha / 130);
-      else if (ha < 210) swing = lerp(-0.55, 0.1, easeIn((ha - 130) / 80));
-      else if (ha < 700) swing = 0.1 * Math.exp(-(ha - 210) / 120) * Math.cos((ha - 210) / 40);
-      if (ha >= 205 && !h.hit) {
+      // 호버 — 0–140 뽑아 올림, 140–220 다시 내리꽂음, 그 뒤 떨림
+      let lift = 0;
+      if (ha < 140) lift = easeOut(ha / 140);
+      else if (ha < 220) lift = 1 - easeIn((ha - 140) / 80);
+      const quiver = ha >= 220 && ha < 700 ? Math.exp(-(ha - 220) / 110) * Math.sin((ha - 220) / 30) * 0.05 : 0;
+      if (ha >= 215 && !h.hit) {
         h.hit = true;
         this.S && this.S.clink();
-        this.shakeIt(140, 5);
-        for (let i = 0; i < 26; i++) {
-          const an = -Math.PI * Math.random();
-          const sp = (0.3 + Math.random()) * fs * 2;
-          this.sparks.push({ x: bp.x, y: bp.y - bp.w * 0.05, vx: Math.cos(an) * sp, vy: Math.sin(an) * sp, age: 0, life: 0.25 + Math.random() * 0.5 });
+        this.shakeIt(140, 6);
+        for (let i = 0; i < 24; i++) {
+          const an = Math.PI * (0.15 + Math.random() * 0.7) * (Math.random() < 0.5 ? -1 : 1) - Math.PI / 2;
+          const sp = (0.3 + Math.random()) * fs * 1.8;
+          this.sparks.push({ x: bp.x, y: bp.y + bp.w * 0.12, vx: Math.cos(an) * sp, vy: Math.sin(an) * sp, age: 0, life: 0.25 + Math.random() * 0.45 });
         }
       }
-      const idle = h.on && ha > 700 ? Math.sin(t / 260) * 0.025 : 0;
+      const idle = h.on && ha > 700 ? Math.sin(t / 240) * 0.02 : 0;
       for (const side of [-1, 1]) {
-        // 손잡이는 단추 아래 바깥, 칼끝은 단추 위로 — 가운데서 X
-        const base = side < 0 ? -0.72 : -Math.PI + 0.72;
-        const tilt = (swing + idle + rec) * -side;
-        const ang = lerp(side < 0 ? 0.9 : -Math.PI - 0.9, base, inP) + tilt;
-        const cross = L * 0.42;
-        const hx = bp.x - Math.cos(ang) * cross + side * (1 - inP) * this.W * 0.4;
-        const hy = bp.y + bp.w * 0.05 - Math.sin(ang) * cross + (1 - inP) * this.H * 0.3;
-        this.drawKatana(hx, hy, L, ang, side);
+        // 칼끝 방향: 아래 안쪽. 왼쪽 칼은 오른쪽 아래로, 오른쪽 칼은 왼쪽 아래로
+        const ang = side < 0 ? 1.05 : Math.PI - 1.05;
+        const wob = (rec + quiver + idle) * side;
+        // 칼끝이 서로를 지나쳐 X 가 되게 — 교차점은 단추 가운데 조금 아래
+        const tipX = bp.x + Math.cos(ang) * L * 0.42;
+        const tipY = bp.y + bp.w * 0.06 + Math.sin(ang) * L * 0.42;
+        const back = (1 - stab) * this.H * 0.7 + lift * L * 0.55;
+        const hx = tipX - Math.cos(ang + wob) * (L + back);
+        const hy = tipY - Math.sin(ang + wob) * (L + back);
+        this.drawKatana(hx, hy, L, ang + wob, side);
       }
-      void ctx;
     }
 
     smokeSprite() {
@@ -716,6 +780,13 @@
       this.sel = { hover: null, split: 0.5, pick: null, pickAt: 0, from: 0.5, at: now() };
       if (from === 'title') this.startWipe('select', null, 'flash'); else this.view = 'select';
       this.match = null;
+    }
+
+    /** 처음 화면에서 되돌아가기 — 서부 쪽이 다시 반으로 줄어든다 */
+    backToSelect() {
+      this.clearTimers();
+      this.sel = { hover: null, split: 1.2, pick: null, pickAt: 0, from: 1.2, at: now() - 2000 };
+      this.view = 'select';
     }
 
     selectSide(x) { const s = this.sel; return x < (s ? s.split : 0.5) * this.W ? 'west' : 'samurai'; }
@@ -927,7 +998,7 @@
         this.clearTimers();
         this.posters = new Map();
         this.boardAt = now();
-        if (this.view === 'title') this.startWipe('board'); else this.view = 'board';
+        if (this.view === 'title' || this.view === 'westhome' || this.view === 'select') this.startWipe('board'); else this.view = 'board';
         this.match = null;
       }
       const keep = new Set();
@@ -936,8 +1007,8 @@
         const old = this.posters.get(p.id);
         if (old && !old.leaving) { Object.assign(old, p, { slot: i }); return; }
         const fresh = now() - this.boardAt > 300;
-        const delay = fresh ? 0 : i * 160;
-        this.posters.set(p.id, { ...p, slot: i, at: now() + delay, tilt: (Math.random() - 0.5) * 0.06, leaving: 0 });
+        const delay = fresh ? 0 : 500 + i * 160;
+        this.posters.set(p.id, { ...p, slot: i, at: now() + delay, tilt: (Math.random() - 0.5) * 0.05, leaving: 0 });
         if (this.S) setTimeout(() => { this.S.clunk(); this.S.clink(); }, delay + 200);
       });
       for (const q of this.posters.values()) {
@@ -948,14 +1019,17 @@
       }
     }
 
-    /** 대기방 화면 좌표 → 수배서 id (방장이 눌러 내보낼 때) */
-    posterAt(x, y) {
-      for (const q of (this.posters || new Map()).values()) {
-        const r = q.rect;
-        if (r && !q.leaving && x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h) return q.id;
+    /** 대기방 화면 좌표 → { slot, id(없으면 null) } */
+    slotAt(x, y) {
+      for (const [i, r] of (this.slotRects || []).entries()) {
+        if (x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h) {
+          const q = [...(this.posters || new Map()).values()].find(v => v.slot === i && !v.leaving);
+          return { slot: i, id: q ? q.id : null, rect: r };
+        }
       }
       return null;
     }
+    posterAt(x, y) { const s = this.slotAt(x, y); return s ? s.id : null; }
 
     /** 가슴 위 사진을 수배서에 인쇄된 것처럼 — 세피아, 대비, 가장자리 번짐 */
     photo(char) {
@@ -963,17 +1037,17 @@
       if (this._photos[char]) return this._photos[char];
       const img = this.img[CHARS[char].key + '_bust'];
       if (!img) return null;
-      const BW = 347, BH = 215;
+      const BW = 420, BH = 300;
       const c = document.createElement('canvas'); c.width = BW; c.height = BH;
       const g = c.getContext('2d');
       g.fillStyle = '#e8dcc0'; g.fillRect(0, 0, BW, BH);
-      const k = BW * 0.62 / img.width;
-      g.drawImage(img, (BW - img.width * k) / 2, 6, img.width * k, img.height * k);
+      const k = BW * 0.66 / img.width;
+      g.drawImage(img, (BW - img.width * k) / 2, 8, img.width * k, img.height * k);
       const d = g.getImageData(0, 0, BW, BH);
       for (let i = 0; i < d.data.length; i += 4) {
         const l = (0.3 * d.data[i] + 0.59 * d.data[i + 1] + 0.11 * d.data[i + 2]) / 255;
-        const v = clamp((l - 0.5) * 1.25 + 0.5);
-        d.data[i] = 60 + v * 180; d.data[i + 1] = 44 + v * 160; d.data[i + 2] = 30 + v * 120;
+        const v = clamp((l - 0.5) * 1.3 + 0.52);
+        d.data[i] = 58 + v * 182; d.data[i + 1] = 42 + v * 162; d.data[i + 2] = 28 + v * 122;
       }
       g.putImageData(d, 0, 0);
       const vg = g.createRadialGradient(BW / 2, BH / 2, BH * 0.3, BW / 2, BH / 2, BW * 0.65);
@@ -984,35 +1058,30 @@
 
     drawBoard(t) {
       const { ctx, W, H } = this;
-      const wood = this.img.wood, poster = this.img.poster;
+      const wood = this.img.wood, poster = this.img.poster_blank;
       if (!wood || !poster) return;
       const ws = Math.max(W / wood.width, H / wood.height);
       ctx.drawImage(wood, (W - wood.width * ws) / 2, (H - wood.height * ws) / 2, wood.width * ws, wood.height * ws);
       const light = ctx.createRadialGradient(W / 2, H * 0.1, 0, W / 2, H * 0.3, Math.max(W, H) * 0.8);
       light.addColorStop(0, 'rgba(255,220,160,.18)'); light.addColorStop(1, 'rgba(0,0,0,.55)');
       ctx.fillStyle = light; ctx.fillRect(0, 0, W, H);
-      // 네 자리 — 넓으면 한 줄, 좁으면 두 줄. 아래는 단추 줄 자리
-      const barH = W < 700 ? 190 : 110;
-      const top = 56, areaH = H - barH - top;
+      // 네 자리 — 넓으면 한 줄, 좁으면 두 줄. 아래는 단추 줄, 오른쪽 아래는 채팅
+      const barH = W < 700 ? 250 : 150;           // 아래 띠 + 채팅 자리
+      const top = 58, areaH = H - barH - top;
       const wide = W / areaH > 1.6;
       const cols = wide ? 4 : 2, rows = wide ? 1 : 2;
       const aspect = poster.width / poster.height;
-      const ph = Math.min((areaH - (rows + 1) * 16) / rows, (W - (cols + 1) * 16) / cols / aspect);
+      const ph = Math.min((areaH - (rows + 1) * 16) / rows, (W - (cols + 1) * 40) / cols / aspect);
       const pw = ph * aspect;
       const gx = (W - cols * pw) / (cols + 1);
       const gy = (areaH - rows * ph) / (rows + 1);
       const at = i => ({ x: gx + (i % cols) * (pw + gx), y: top + gy + Math.floor(i / cols) * (ph + gy) });
+      this.slotRects = [0, 1, 2, 3].map(i => ({ ...at(i), w: pw, h: ph }));
       const list = [...(this.posters || new Map()).values()];
       for (let i = 0; i < 4; i++) {
         if (list.some(v => v.slot === i && !v.leaving)) continue;
         const { x, y } = at(i);
-        ctx.fillStyle = 'rgba(255,235,200,.05)';
-        ctx.fillRect(x, y, pw, ph);
-        ctx.fillStyle = 'rgba(255,238,210,.45)';
-        ctx.font = `${ph * 0.07}px ${FONT_H}`;
-        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText('빈 자리', x + pw / 2, y + ph / 2);
-        this.drawNail(x + pw / 2, y + ph * 0.02, Math.max(2, ph * 0.01));
+        this.drawEmptyPoster(x, y, pw, ph, t, i);
       }
       for (const q of list) {
         const { x, y } = at(q.slot);
@@ -1026,9 +1095,95 @@
       ctx.fillStyle = 'rgba(255,240,210,.35)'; ctx.beginPath(); ctx.arc(x - r * 0.3, y - r * 0.3, r * 0.35, 0, TAU); ctx.fill();
     }
 
+    /** 수배서 속 — 사진 틀 · DEAD OR ALIVE · 이름. k = 화면 픽셀 / 원본 픽셀 */
+    posterFace(k, { pic, name, empty }) {
+      const { ctx } = this;
+      const bx = 64, by = 150, bw = 448, bh = 318;
+      ctx.fillStyle = empty ? 'rgba(59,36,20,.18)' : '#2e1c10';
+      ctx.fillRect((bx - 7) * k, (by - 7) * k, (bw + 14) * k, (bh + 14) * k);
+      ctx.fillStyle = '#e6d5ad';
+      ctx.fillRect((bx - 3) * k, (by - 3) * k, (bw + 6) * k, (bh + 6) * k);
+      if (pic) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'multiply';
+        ctx.drawImage(pic, bx * k, by * k, bw * k, bh * k);
+        ctx.restore();
+      } else {
+        // 빈 자리 — 누군지 모를 까만 실루엣
+        ctx.fillStyle = 'rgba(42,26,14,.8)';
+        const cx = (bx + bw / 2) * k, base = (by + bh) * k;
+        ctx.beginPath();
+        ctx.moveTo(cx - 150 * k, base);
+        ctx.quadraticCurveTo(cx - 140 * k, base - 90 * k, cx - 60 * k, base - 110 * k);
+        ctx.lineTo(cx - 40 * k, base - 150 * k);
+        ctx.quadraticCurveTo(cx - 60 * k, base - 200 * k, cx - 45 * k, base - 215 * k);
+        ctx.lineTo(cx - 120 * k, base - 215 * k);
+        ctx.quadraticCurveTo(cx - 150 * k, base - 225 * k, cx - 120 * k, base - 240 * k);
+        ctx.quadraticCurveTo(cx - 60 * k, base - 250 * k, cx - 52 * k, base - 270 * k);
+        ctx.quadraticCurveTo(cx - 40 * k, base - 305 * k, cx, base - 300 * k);
+        ctx.quadraticCurveTo(cx + 40 * k, base - 305 * k, cx + 52 * k, base - 270 * k);
+        ctx.quadraticCurveTo(cx + 60 * k, base - 250 * k, cx + 120 * k, base - 240 * k);
+        ctx.quadraticCurveTo(cx + 150 * k, base - 225 * k, cx + 120 * k, base - 215 * k);
+        ctx.lineTo(cx + 45 * k, base - 215 * k);
+        ctx.quadraticCurveTo(cx + 60 * k, base - 200 * k, cx + 40 * k, base - 150 * k);
+        ctx.lineTo(cx + 60 * k, base - 110 * k);
+        ctx.quadraticCurveTo(cx + 140 * k, base - 90 * k, cx + 150 * k, base);
+        ctx.closePath(); ctx.fill();
+        ctx.fillStyle = 'rgba(230,213,173,.85)';
+        ctx.font = `${120 * k}px ${FONT_W}`;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('?', cx, base - 175 * k);
+      }
+      ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+      ctx.fillStyle = '#3b2414';
+      ctx.font = `${50 * k}px Rye, ${FONT_W}`;
+      ctx.fillText('DEAD OR ALIVE', 288 * k, 540 * k, 470 * k);
+      ctx.fillRect(90 * k, 560 * k, 396 * k, 3 * k);
+      ctx.fillStyle = empty ? 'rgba(59,36,20,.55)' : '#2a170c';
+      ctx.font = `900 ${104 * k}px ${FONT_T}`;
+      ctx.fillText(name, 288 * k, 672 * k, 480 * k);
+    }
+
+    drawEmptyPoster(x, y, pw, ph, t, i) {
+      const { ctx } = this;
+      const poster = this.img.poster_blank;
+      const k = pw / poster.width;
+      const hover = this.slotHover === i;
+      ctx.save();
+      ctx.translate(x, y);
+      // 해진 종이 한 장이 반쯤 떼어진 채 붙어 있다 — 흐리게, 점선 테두리
+      ctx.globalAlpha = hover ? 0.95 : 0.72;
+      ctx.save();
+      ctx.shadowColor = 'rgba(0,0,0,.45)'; ctx.shadowBlur = ph * 0.03; ctx.shadowOffsetY = ph * 0.01;
+      ctx.filter = 'grayscale(.6) brightness(.8)';
+      ctx.drawImage(poster, 0, 0, pw, ph);
+      ctx.restore();
+      ctx.filter = 'none';
+      this.posterFace(k, { pic: null, name: '빈 자리', empty: true });
+      ctx.globalAlpha = 1;
+      ctx.setLineDash([10 * k * 2, 8 * k * 2]);
+      ctx.lineDashOffset = -t / 40;
+      ctx.strokeStyle = hover ? 'rgba(255,214,140,.95)' : 'rgba(255,230,190,.55)';
+      ctx.lineWidth = Math.max(2, 5 * k);
+      ctx.strokeRect(-6, -6, pw + 12, ph + 12);
+      ctx.setLineDash([]);
+      if (this.canAddBot) {
+        const pulse = 0.75 + 0.25 * Math.sin(t / 380 + i);
+        ctx.fillStyle = `rgba(142,42,28,${hover ? 1 : 0.85 * pulse})`;
+        const bw = 330 * k, bh = 70 * k, bx = (576 * k - bw) / 2, byy = 700 * k - bh / 2 + 12 * k;
+        ctx.fillRect(bx, byy - 4 * k, bw, bh);
+        ctx.fillStyle = '#f3e1b8';
+        ctx.font = `900 ${34 * k}px ${FONT_T}`;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('+ 봇 앉히기', 288 * k, byy + bh / 2 - 4 * k);
+      }
+      this.drawNail(pw / 2, 14 * k, 7 * k);
+      ctx.restore();
+    }
+
     drawPoster(q, x, y, pw, ph, t) {
       const { ctx } = this;
-      const poster = this.img.poster;
+      const poster = this.img.poster_blank;
       const k = pw / poster.width;
       if (t < q.at) return;
       const e = easeOut((t - q.at) / 420);
@@ -1037,7 +1192,6 @@
         const l = easeIn((t - q.leaving) / 600);
         drop = l * ph * 0.5; rot = q.tilt + l * 0.5; alpha = 1 - l;
       }
-      q.rect = { x, y, w: pw, h: ph };
       ctx.save();
       ctx.globalAlpha = alpha;
       ctx.translate(x + pw / 2, y + 14 * k + drop);
@@ -1047,59 +1201,78 @@
       ctx.shadowColor = 'rgba(0,0,0,.55)'; ctx.shadowBlur = ph * 0.04; ctx.shadowOffsetY = ph * 0.015;
       ctx.drawImage(poster, 0, 0, pw, ph);
       ctx.restore();
-      // 사진
-      const pic = this.photo(q.char % 4);
-      if (pic) {
+      this.posterFace(k, { pic: this.photo(q.char % 4), name: q.name });
+      // 도장 — 나 · 봇 · 방장
+      const stamps = [];
+      if (q.me) stamps.push('나');
+      if (q.bot) stamps.push('BOT');
+      if (q.host) stamps.push('방장');
+      stamps.forEach((stamp, si) => {
+        const se = easeOut((t - q.at - 380 - si * 120) / 220);
+        if (se <= 0) return;
         ctx.save();
-        ctx.globalCompositeOperation = 'multiply';
-        ctx.drawImage(pic, 114 * k, 185 * k, 347 * k, 215 * k);
-        ctx.restore();
-      }
-      // 이름 · 별명 — 펜으로 채운다
-      ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'left';
-      ctx.fillStyle = '#2b1d12';
-      ctx.font = `${20 * k}px ${FONT_W}`;
-      ctx.fillText('NAME', 40 * k, 522 * k);
-      ctx.strokeStyle = 'rgba(43,29,18,.55)'; ctx.lineWidth = Math.max(1, 1.2 * k);
-      ctx.beginPath(); ctx.moveTo(108 * k, 528 * k); ctx.lineTo(350 * k, 528 * k); ctx.stroke();
-      ctx.font = `${14 * k}px ${FONT_W}`;
-      ctx.fillText(CHARS[q.char % 4].en, 365 * k, 522 * k, 175 * k);
-      ctx.font = `${66 * k}px ${FONT_H}`;
-      ctx.fillStyle = '#1f2946';
-      ctx.fillText(q.name, 114 * k, 526 * k, 236 * k);
-      // 도장
-      const stamp = q.me ? '나' : q.bot ? 'BOT' : null;
-      if (stamp) {
-        const se = easeOut((t - q.at - 380) / 220);
-        if (se > 0) {
-          ctx.save();
-          ctx.translate(415 * k, 355 * k); ctx.rotate(-0.22);
-          const sc = lerp(1.8, 1, se);
-          ctx.scale(sc, sc);
-          ctx.globalAlpha = alpha * 0.8 * se;
-          ctx.strokeStyle = '#a3241b'; ctx.fillStyle = '#a3241b';
-          ctx.lineWidth = 5 * k;
-          const sw = (stamp === '나' ? 80 : 104) * k, sh = 58 * k;
-          ctx.strokeRect(-sw / 2, -sh / 2, sw, sh);
-          ctx.font = stamp === '나' ? `900 ${40 * k}px ${FONT_T}` : `${30 * k}px ${FONT_W}`;
-          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-          ctx.fillText(stamp, 0, 2 * k);
-          ctx.restore();
-        }
-      }
-      if (q.host) {
-        ctx.save();
-        ctx.translate(150 * k, 214 * k); ctx.rotate(-0.08);
-        ctx.globalAlpha = alpha * 0.85;
-        ctx.fillStyle = '#a3241b';
-        ctx.fillRect(-38 * k, -17 * k, 76 * k, 34 * k);
-        ctx.fillStyle = '#f3e6cf';
-        ctx.font = `900 ${22 * k}px ${FONT_T}`;
+        ctx.translate((si ? 120 : 452) * k, (si ? 425 : 420) * k); ctx.rotate(si ? 0.14 : -0.2);
+        const sc = lerp(1.8, 1, se);
+        ctx.scale(sc, sc);
+        ctx.globalAlpha = alpha * 0.85 * se;
+        ctx.strokeStyle = '#a3241b'; ctx.fillStyle = '#a3241b';
+        ctx.lineWidth = 6 * k;
+        ctx.font = stamp === 'BOT' ? `${40 * k}px ${FONT_W}` : `900 ${44 * k}px ${FONT_T}`;
+        const tw = ctx.measureText(stamp).width + 36 * k, th = 70 * k;
+        ctx.strokeRect(-tw / 2, -th / 2, tw, th);
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText('방장', 0, 1 * k);
+        ctx.fillText(stamp, 0, 3 * k);
         ctx.restore();
-      }
+      });
       this.drawNail(pw / 2, 14 * k, 7 * k);
+      ctx.restore();
+    }
+
+    /* ─────────── 방 만들기 전 — 서부 거리, 사람은 오른쪽 ─────────── */
+
+    westHome() {
+      const from = this.view;
+      this.clearTimers();
+      this.homeAt = now();
+      this.homeFrom = from === 'select' ? 0.6 : 0.72;
+      if (from === 'title' || from === 'board' || from === 'over') this.startWipe('westhome'); else this.view = 'westhome';
+      this.match = null;
+    }
+
+    drawWestHome(t) {
+      const { ctx, W, H } = this;
+      const bg = this.img.mode_west_bg, man = this.img.mode_west_man;
+      if (!bg) return;
+      const a = t - (this.homeAt || t);
+      const bs = Math.max(W / bg.width, H / bg.height) * 1.06;
+      const bw = bg.width * bs, bh = bg.height * bs;
+      ctx.drawImage(bg, (W - bw) / 2 + W * 0.05 + Math.sin(t / 9000) * 8, (H - bh) / 2, bw, bh);
+      const narrow = W < 760;
+      const mxN = lerp(this.homeFrom || 0.72, narrow ? 0.5 : 0.7, easeIO(a / 800));
+      if (man) {
+        const mh = H * (narrow ? 0.7 : 0.9);
+        const mw = man.width * mh / man.height;
+        const cx = W * mxN;
+        const shadow = ctx.createRadialGradient(cx, H * 0.97, 0, cx, H * 0.97, mw * 0.6);
+        shadow.addColorStop(0, 'rgba(0,0,0,.55)'); shadow.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = shadow; ctx.fillRect(cx - mw, H * 0.9, mw * 2, H * 0.12);
+        const rim = this.backlit('mode_west_man');
+        if (rim) { ctx.save(); ctx.globalAlpha = 0.28; ctx.drawImage(rim.rim, cx - mw / 2 + mh * 0.004, H * 0.99 - mh - mh * 0.003, mw, mh); ctx.restore(); }
+        ctx.drawImage(man, cx - mw / 2, H * 0.99 - mh + Math.sin(t / 1400) * 1.5, mw, mh);
+      }
+      const shade = ctx.createLinearGradient(0, 0, W * 0.6, 0);
+      shade.addColorStop(0, 'rgba(10,6,3,.55)'); shade.addColorStop(1, 'rgba(10,6,3,0)');
+      ctx.fillStyle = shade; ctx.fillRect(0, 0, W, H);
+      const fog = ctx.createLinearGradient(0, H * 0.7, 0, H);
+      fog.addColorStop(0, 'rgba(200,160,110,0)'); fog.addColorStop(1, 'rgba(200,160,110,.45)');
+      ctx.fillStyle = fog; ctx.fillRect(0, H * 0.7, W, H * 0.3);
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      const sun = ctx.createRadialGradient(W * 0.95, -H * 0.1, 0, W * 0.95, -H * 0.1, H * 1.1);
+      sun.addColorStop(0, 'rgba(255,210,140,.35)'); sun.addColorStop(1, 'rgba(255,180,100,0)');
+      ctx.fillStyle = sun; ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = 'rgba(255,225,180,.5)';
+      for (const mo of this.motes) { ctx.beginPath(); ctx.arc(mo.x * W, mo.y * H, mo.r, 0, TAU); ctx.fill(); }
       ctx.restore();
     }
 
@@ -1409,68 +1582,84 @@
         pathTo(); ctx.strokeStyle = '#fff6df'; ctx.lineWidth = Math.max(1.5, W * 0.0012); ctx.stroke();
       }
       ctx.restore();
-      // VS — 선수가 다 들어온 뒤, V 는 왼쪽에서 S 는 오른쪽에서 날아와 가운데서 부딪힌다
+      // VS — 선수가 다 들어온 뒤: 먹 원판이 찍히고, 붉은 별이 돌아 들어오고, V 와 S 가 양옆에서 박힌다
       const vsAt = 180 + (n - 1) * 90 + 520;
-      const fly = easeIn((vt - vsAt) / 220);
       if (vt > vsAt) {
-        const fs = Math.min(W, H) * (n === 2 ? 0.24 : 0.13);
-        const spots = n === 2 ? [[W / 2, H * 0.42]] : this.bolts.lines.map(b => [lerp(b[1][0], b[2][0], 0.5), H * 0.46]);
-        const hit = vt >= vsAt + 220;
+        const fs = Math.min(W, H) * (n === 2 ? 0.2 : 0.11);
+        const spots = n === 2 ? [[W / 2, H * 0.45]] : this.bolts.lines.map(b => [lerp(b[1][0], b[2][0], 0.5), H * 0.46]);
+        const va = vt - vsAt;
+        const disc = va < 160 ? easeOut(va / 160) * 1.12 : 1.12 - 0.12 * easeOut((va - 160) / 200);
+        const star = easeOut((va - 60) / 320);
+        const fly = easeIn((va - 200) / 200);
+        const hit = va >= 400;
         if (hit && !this._vsHit) {
           this._vsHit = true;
-          this.shakeIt(280, 16);
-          this.S && this.S.clash();
-          for (const [x, y] of spots) for (let i = 0; i < 26; i++) {
-            const an = Math.random() * TAU, sp = (0.3 + Math.random()) * fs * 4;
-            (this.vsSparks = this.vsSparks || []).push({ x, y, vx: Math.cos(an) * sp, vy: Math.sin(an) * sp, age: 0, life: 0.3 + Math.random() * 0.5 });
+          this.shakeIt(260, 14);
+          this.S && this.S.thud(0.9);
+          for (const [x, y] of spots) for (let i = 0; i < 22; i++) {
+            const an = Math.random() * TAU, sp = (0.3 + Math.random()) * fs * 2.2;
+            (this.vsSparks = this.vsSparks || []).push({ x, y, vx: Math.cos(an) * sp, vy: Math.sin(an) * sp, age: 0, life: 0.5 + Math.random() * 0.6, dust: true });
           }
         }
         if (!hit) this._vsHit = false;
-        const after = hit ? vt - vsAt - 220 : 0;
-        const bump = hit ? Math.exp(-after / 90) * Math.sin(after / 25) * fs * 0.03 : 0;
+        const bump = hit ? Math.exp(-(va - 400) / 90) * Math.sin((va - 400) / 22) * fs * 0.025 : 0;
         for (const [x, y] of spots) {
           ctx.save();
           ctx.translate(x, y);
-          ctx.textBaseline = 'middle';
-          ctx.font = `${fs}px ${FONT_W}`;
-          const vw = ctx.measureText('V').width, sw = ctx.measureText('S').width;
-          const gapIn = fs * 0.02;
-          const vx = lerp(-W * 0.6, -vw - gapIn / 2, fly) - bump;
-          const sx = lerp(W * 0.6, gapIn / 2, fly) + bump;
-          const g = ctx.createLinearGradient(0, -fs / 2, 0, fs / 2);
-          g.addColorStop(0, '#fff6d8'); g.addColorStop(0.45, '#f0b048'); g.addColorStop(0.55, '#c56a1c'); g.addColorStop(1, '#6b2a08');
-          ctx.lineJoin = 'round'; ctx.lineWidth = fs * 0.1; ctx.strokeStyle = '#1c0a04';
-          ctx.textAlign = 'left';
-          for (const [ch, px, dir] of [['V', vx, -1], ['S', sx, 1]]) {
-            if (!hit) {   // 날아오는 잔상
-              ctx.globalAlpha = 0.25;
-              ctx.fillStyle = '#f0b048';
-              ctx.fillText(ch, px + dir * fs * 0.35, 0);
-              ctx.globalAlpha = 1;
+          // 해진 먹 원판
+          ctx.save();
+          ctx.scale(disc, disc);
+          ctx.fillStyle = '#1c120b';
+          ctx.beginPath();
+          for (let i = 0; i <= 36; i++) {
+            const an = i / 36 * TAU, rr = fs * (0.95 + ((i * 7919) % 13) / 13 * 0.08);
+            i ? ctx.lineTo(Math.cos(an) * rr, Math.sin(an) * rr) : ctx.moveTo(Math.cos(an) * rr, Math.sin(an) * rr);
+          }
+          ctx.fill();
+          ctx.strokeStyle = '#e2c48c'; ctx.lineWidth = fs * 0.03;
+          ctx.beginPath(); ctx.arc(0, 0, fs * 0.84, 0, TAU); ctx.stroke();
+          ctx.lineWidth = fs * 0.012;
+          ctx.beginPath(); ctx.arc(0, 0, fs * 0.78, 0, TAU); ctx.stroke();
+          ctx.restore();
+          // 붉은 별
+          if (star > 0) {
+            ctx.save();
+            ctx.rotate((1 - star) * Math.PI);
+            ctx.scale(star, star);
+            ctx.fillStyle = '#9a2a1c';
+            ctx.beginPath();
+            for (let i = 0; i < 10; i++) {
+              const an = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? fs * 0.3 : fs * 0.72;
+              i ? ctx.lineTo(Math.cos(an) * rr, Math.sin(an) * rr) : ctx.moveTo(Math.cos(an) * rr, Math.sin(an) * rr);
             }
-            ctx.strokeText(ch, px, 0);
-            ctx.fillStyle = g; ctx.fillText(ch, px, 0);
+            ctx.closePath(); ctx.fill();
+            ctx.restore();
+          }
+          // V · S — 나무 활자
+          ctx.font = `${fs * 0.95}px Rye, ${FONT_W}`;
+          ctx.textBaseline = 'middle';
+          const vw = ctx.measureText('V').width;
+          const vx = lerp(-W * 0.6, -vw - fs * 0.02, fly) - bump;
+          const sx = lerp(W * 0.6, fs * 0.02, fly) + bump;
+          ctx.lineJoin = 'round';
+          ctx.textAlign = 'left';
+          for (const [ch, px] of [['V', vx], ['S', sx]]) {
+            if (fly <= 0) continue;
+            ctx.lineWidth = fs * 0.12; ctx.strokeStyle = '#1c120b';
+            ctx.strokeText(ch, px, fs * 0.04);
+            ctx.fillStyle = '#6e1f13'; ctx.fillText(ch, px + fs * 0.03, fs * 0.07);
+            ctx.fillStyle = '#f3e1b8'; ctx.fillText(ch, px, fs * 0.04);
           }
           ctx.restore();
-          if (hit && after < 500) {
-            const rk = after / 500;
-            ctx.strokeStyle = `rgba(255,220,160,${0.75 * (1 - rk)})`;
-            ctx.lineWidth = fs * 0.05 * (1 - rk);
-            ctx.beginPath(); ctx.arc(x, y, fs * 2 * easeOut(rk), 0, TAU); ctx.stroke();
-            ctx.fillStyle = `rgba(255,240,215,${0.5 * (1 - rk * 3)})`;
-            if (rk < 0.33) ctx.fillRect(0, 0, W, H);
-          }
         }
         if (this.vsSparks && this.vsSparks.length) {
           ctx.save();
-          ctx.globalCompositeOperation = 'lighter';
           for (const p of this.vsSparks) {
-            p.age += 1 / 60; p.vx *= 0.92; p.vy = p.vy * 0.92 + fs * 0.1; p.x += p.vx / 60; p.y += p.vy / 60;
+            p.age += 1 / 60; p.vx *= 0.9; p.vy = p.vy * 0.9 - fs * 0.02; p.x += p.vx / 60; p.y += p.vy / 60;
             const k = 1 - p.age / p.life;
             if (k <= 0) continue;
-            ctx.strokeStyle = `rgba(255,${Math.round(180 + 70 * k)},${Math.round(100 * k)},${k})`;
-            ctx.lineWidth = 2;
-            ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x - p.vx * 0.03, p.y - p.vy * 0.03); ctx.stroke();
+            ctx.fillStyle = `rgba(214,190,150,${0.45 * k})`;
+            ctx.beginPath(); ctx.arc(p.x, p.y, fs * 0.12 * (1.6 - k), 0, TAU); ctx.fill();
           }
           ctx.restore();
           this.vsSparks = this.vsSparks.filter(p => p.age < p.life);
@@ -1785,6 +1974,13 @@
       const x = W * 0.07, y = H * 0.7;
       const fs = Math.min(H * 0.11, W * 0.09);
       ctx.save();
+      // 사막 위에서도 읽히게 — 왼쪽 아래를 어둡게 덮는다
+      const band = easeOut(a / 400);
+      const bg = ctx.createLinearGradient(0, 0, W * 0.62, 0);
+      bg.addColorStop(0, `rgba(12,7,4,${0.8 * band})`); bg.addColorStop(0.7, `rgba(12,7,4,${0.55 * band})`); bg.addColorStop(1, 'rgba(12,7,4,0)');
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, y - fs * 1.55, W * 0.62, fs * 2.75);
+      ctx.shadowColor = 'rgba(0,0,0,.85)'; ctx.shadowBlur = fs * 0.12;
       const line = easeOut(a / 350);
       ctx.fillStyle = '#e8b85a';
       ctx.fillRect(x, y + fs * 0.35, W * 0.42 * line, Math.max(2, fs * 0.04));

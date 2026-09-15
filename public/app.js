@@ -37,7 +37,7 @@
     if (G && G.duel) G.duel.stop();
     G = null;
     S.wind(true);
-    west.field(0, []);
+    west.westHome();
     view('home');
   }
 
@@ -157,9 +157,7 @@
     const cfg = R.normCfg({ mode: 'west', target: 1 });
     let players, mine;
     if (kind === 'solo') {
-      const lv = $('#botLv').value;
-      players = [{ id: 1, name: myName() || '나' }];
-      for (let i = 0; i < Number($('#botN').value); i++) players.push({ id: i + 2, name: BOT_NAMES[i], bot: true, level: lv });
+      players = [{ id: 1, name: myName() || '나' }, { id: 2, name: BOT_NAMES[0], bot: true, level: 'normal' }];
       mine = [1];
     } else {
       players = [{ id: 1, name: '왼쪽' }, { id: 2, name: '오른쪽' }];
@@ -206,11 +204,13 @@
   function onMsg(m) {
     switch (m.t) {
       case 'joined':
+        $('#chatLog').innerHTML = '';
         sess.set('duel.code', m.code); sess.set('duel.token', m.token);
         want = true;
         history.replaceState(null, '', `?room=${m.code}`);
         break;
       case 'state': onState(m); break;
+      case 'chat': addChat(m); break;
       case 'ev': if (G && G.kind === 'net') onEv(m.ev); break;
       case 'err':
         if (m.fatal) { forget(); toHome(); }
@@ -248,18 +248,83 @@
     $('#roomCode').textContent = s.code;
     document.querySelectorAll('#hostOpts select[data-cfg]').forEach(sel => { sel.value = String(s.cfg[sel.dataset.cfg]); });
     $('#hostOpts').hidden = !host;
-    $('#addBotBtn').hidden = $('#addBotLv').hidden = s.players.length >= R.MAX_PLAYERS.west;
+    west.canAddBot = host && s.players.length < R.MAX_PLAYERS.west;
+    if (!host) closeSlotMenu();
     $('#startBtn').disabled = !host;
     $('#startBtn').textContent = host ? '결투 시작' : '방장을 기다리는 중';
     $('#lobbyErr').textContent = '';
   }
 
-  // 방장이 다른 사람 수배서를 누르면 내보낸다
+  // 대기방 — 빈 자리를 누르면 봇 앉히기, 다른 사람 수배서를 누르면 방장 넘기기 · 내보내기 (방장만)
+  const LV = { easy: '쉬움', normal: '보통', hard: '어려움' };
+  function openSlotMenu(hit) {
+    const s = N, menu = $('#slotMenu');
+    const p = hit.id != null ? s.players.find(x => x.id === hit.id) : null;
+    let title, items;
+    if (!p) {
+      if (s.players.length >= R.MAX_PLAYERS.west) return;
+      title = '봇 앉히기';
+      items = Object.entries(LV).map(([lv, ko]) => [`${ko}`, () => wsSend({ t: 'addBot', level: lv })]);
+    } else {
+      if (p.id === s.meId) return;
+      title = p.name;
+      items = [];
+      if (!p.bot) items.push(['방장 넘기기', () => wsSend({ t: 'host', id: p.id })]);
+      items.push([p.bot ? '봇 빼기' : '내보내기', () => wsSend({ t: 'kick', id: p.id })]);
+    }
+    $('#smTitle').textContent = title;
+    $('#smBody').innerHTML = '';
+    for (const [label, fn] of items) {
+      const b = document.createElement('button');
+      b.className = 'btn'; b.textContent = label;
+      b.addEventListener('click', () => { S.unlock(); fn(); closeSlotMenu(); });
+      $('#smBody').appendChild(b);
+    }
+    const r = hit.rect;
+    menu.style.left = `${r.x + r.w * 0.08}px`;
+    menu.style.width = `${r.w * 0.84}px`;
+    menu.style.top = `${r.y + r.h * (p ? 0.55 : 0.62)}px`;
+    menu.classList.remove('open'); void menu.offsetWidth; menu.classList.add('open');
+    menu.dataset.slot = hit.slot;
+  }
+  function closeSlotMenu() { $('#slotMenu').classList.remove('open'); }
   $('#scene').addEventListener('click', e => {
     if (document.body.dataset.view !== 'lobby' || !N || N.hostId !== N.meId) return;
-    const id = west.posterAt(e.clientX, e.clientY);
-    const p = N.players.find(x => x.id === id);
-    if (p && p.id !== N.meId && confirm(`${p.name} 을(를) 내보낼까요?`)) wsSend({ t: 'kick', id });
+    const hit = west.slotAt(e.clientX, e.clientY);
+    const menu = $('#slotMenu');
+    if (!hit) return closeSlotMenu();
+    if (menu.classList.contains('open') && menu.dataset.slot === String(hit.slot)) return closeSlotMenu();
+    S.unlock();
+    openSlotMenu(hit);
+  });
+  $('#scene').addEventListener('pointermove', e => {
+    if (document.body.dataset.view !== 'lobby') return;
+    const hit = N && N.hostId === N.meId ? west.slotAt(e.clientX, e.clientY) : null;
+    west.slotHover = hit && hit.id == null ? hit.slot : null;
+    $('#scene').style.cursor = hit && (hit.id == null || hit.id !== N.meId) ? 'pointer' : '';
+  });
+
+  // 채팅
+  function addChat(m) {
+    const li = document.createElement('li');
+    if (m.sys) { li.className = 'sys'; li.textContent = m.text; }
+    else {
+      const b = document.createElement('b'); b.textContent = m.name;
+      const sp = document.createElement('span'); sp.textContent = m.text;
+      li.append(b, sp);
+      if (N && m.from === N.meId) li.className = 'me';
+    }
+    const log = $('#chatLog');
+    log.appendChild(li);
+    while (log.children.length > 40) log.firstChild.remove();
+    log.scrollTop = log.scrollHeight;
+  }
+  $('#chatForm').addEventListener('submit', e => {
+    e.preventDefault();
+    const text = $('#chatIn').value.trim();
+    if (!text) return;
+    wsSend({ t: 'chat', text });
+    $('#chatIn').value = '';
   });
 
   /* ─────────────────────── 단추 ─────────────────────── */
@@ -269,13 +334,14 @@
 
   $('#startGameBtn').addEventListener('click', () => { S.unlock(); west.select(); view('select'); });
   $('#scene').addEventListener('pointermove', e => { if (document.body.dataset.view === 'select') west.selectHover(e.clientX); });
+  $('#backSelect').addEventListener('click', () => { if (N) { wsSend({ t: 'leave' }); forget(); } west.backToSelect(); view('select'); });
   $('#soonBack').addEventListener('click', () => { west.selectReset(); view('select'); });
   $('#scene').addEventListener('pointerleave', () => { if (document.body.dataset.view === 'select') west.selectHover(null); });
   $('#scene').addEventListener('click', e => {
     if (document.body.dataset.view !== 'select') return;
     S.unlock();
     west.selectPick(e.clientX, side => {
-      if (side === 'west') toHome();
+      if (side === 'west') { west.westHome(); view('home'); }
       else view('soon');
     });
   });
@@ -292,14 +358,12 @@
   };
   $('#joinBtn').addEventListener('click', join);
   $('#codeIn').addEventListener('keydown', e => { if (e.key === 'Enter') join(); });
-  $('#soloBtn').addEventListener('click', () => startLocal('solo'));
   $('#pairBtn').addEventListener('click', () => startLocal('pair'));
 
   $('#copyBtn').addEventListener('click', async () => {
     const url = `${location.origin}/?room=${N.code}`;
     try { await navigator.clipboard.writeText(url); toast('초대 링크를 복사했어요.'); } catch (_) { toast(url, 5000); }
   });
-  $('#addBotBtn').addEventListener('click', () => wsSend({ t: 'addBot', level: $('#addBotLv').value }));
   document.querySelectorAll('#hostOpts select[data-cfg]').forEach(sel => sel.addEventListener('change', () => {
     const k = sel.dataset.cfg;
     const v = k === 'target' ? Number(sel.value) : k === 'decoys' ? sel.value === 'true' : sel.value;
