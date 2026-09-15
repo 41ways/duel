@@ -103,15 +103,21 @@ async function check(name, fn) {
   });
 
   await check('신호 → 쏘기 → 판정', async () => {
-    // 앞 시험들이 도는 동안 판이 이미 몇 라운드 지났을 수 있다 — 새 신호부터 본다
-    a.inbox.length = 0; b.inbox.length = 0;
-    tx(a, { t: 'again', now: true });                 // 이미 끝났으면 바로 한 판 더
-    const sig = await waitFor(a, m => m.t === 'ev' && m.ev.k === 'signal', 30000, 'signal');
-    tx(a, { t: 'shoot', r: sig.ev.r, ms: 150 });
-    tx(b, { t: 'shoot', r: sig.ev.r, ms: 400 });
-    const res = await waitFor(b, m => m.t === 'ev' && m.ev.k === 'result', 5000, 'result');
-    const me = res.ev.rows.find(r => r.st === 'ok' && r.ms === 150);
-    assert.ok(me && res.ev.win.includes(me.id), '150ms 가 이겨야 함');
+    // 앞 시험의 판과 섞이지 않게 새 방에서 둘이
+    const c = await open(), d = await open();
+    tx(c, { t: 'create', name: '빠른손' });
+    const { code } = await waitFor(c, m => m.t === 'joined');
+    tx(d, { t: 'join', code, name: '느린손' });
+    await waitFor(c, m => m.t === 'state' && m.players.length === 2);
+    tx(c, { t: 'cfg', cfg: { decoys: false } });
+    tx(c, { t: 'start' });
+    const sig = await waitFor(c, m => m.t === 'ev' && m.ev.k === 'signal', 30000, 'signal');
+    tx(c, { t: 'shoot', r: sig.ev.r, ms: 150 });
+    tx(d, { t: 'shoot', r: sig.ev.r, ms: 400 });
+    const res = await waitFor(d, m => m.t === 'ev' && m.ev.k === 'result', 5000, 'result');
+    const fast = res.ev.rows.find(r => r.st === 'ok' && r.ms === 150);
+    assert.ok(fast && res.ev.win.includes(fast.id), '150ms 가 이겨야 함 ' + JSON.stringify(res.ev.rows));
+    for (const w of [c, d]) { tx(w, { t: 'leave' }); w.close(); }
   });
 
   for (const w of [a, b]) { try { tx(w, { t: 'leave' }); w.close(); } catch (_) {} }
