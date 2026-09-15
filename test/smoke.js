@@ -103,7 +103,9 @@ async function check(name, fn) {
   });
 
   await check('신호 → 쏘기 → 판정', async () => {
-    const sig = await waitFor(a, m => m.t === 'ev' && m.ev.k === 'signal', 20000, 'signal');
+    // 앞 시험들이 도는 동안 판이 이미 몇 라운드 지났을 수 있다 — 새 신호부터 본다
+    a.inbox.length = 0; b.inbox.length = 0;
+    const sig = await waitFor(a, m => m.t === 'ev' && m.ev.k === 'signal', 30000, 'signal');
     tx(a, { t: 'shoot', r: sig.ev.r, ms: 150 });
     tx(b, { t: 'shoot', r: sig.ev.r, ms: 400 });
     const res = await waitFor(b, m => m.t === 'ev' && m.ev.k === 'result', 5000, 'result');
