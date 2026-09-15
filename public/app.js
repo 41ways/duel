@@ -301,7 +301,7 @@
     const host = s.hostId === s.meId;
     $('#roomCode').textContent = s.code;
     document.querySelectorAll('#hostOpts select[data-cfg]').forEach(sel => { sel.value = String(s.cfg[sel.dataset.cfg]); sel.disabled = !host; });
-    $('#rulesNote').textContent = host ? '빈 자리를 누르면 봇을 앉히고, 다른 사람 수배서를 누르면 방장을 넘기거나 내보낼 수 있어요.' : '방장이 규칙을 정하고 있어요.';
+    $('#rulesNote').textContent = host ? '' : '방장이 규칙을 정하고 있어요.';
     west.canAddBot = host && s.players.length < R.MAX_PLAYERS.west;
     if (!host) closeSlotMenu();
     $('#startBtn').disabled = !host;
@@ -442,6 +442,34 @@
   };
   $('#joinBtn').addEventListener('click', join);
   $('#codeIn').addEventListener('keydown', e => { if (e.key === 'Enter') join(); });
+
+  $('#helpBtn').addEventListener('click', e => {
+    e.stopPropagation();
+    const open = $('#helpBox').hidden;
+    $('#helpBox').hidden = !open;
+    $('#helpBtn').setAttribute('aria-expanded', String(open));
+  });
+  addEventListener('pointerdown', e => {
+    if (!$('#helpBox').hidden && !e.target.closest('.together')) { $('#helpBox').hidden = true; $('#helpBtn').setAttribute('aria-expanded', 'false'); }
+  });
+
+  // 방 만들기 화면 — 마우스를 따라 수배서(가까움)와 사람(멀리)이 다르게 움직이고, 종이는 살짝 펄럭인다
+  const par = { x: 0, y: 0, tx: 0, ty: 0 };
+  addEventListener('pointermove', e => {
+    par.tx = (e.clientX / innerWidth - 0.5) * 2;
+    par.ty = (e.clientY / innerHeight - 0.5) * 2;
+  });
+  (function parallax(t) {
+    requestAnimationFrame(parallax);
+    if (document.body.dataset.view !== 'home') return;
+    par.x += (par.tx - par.x) * 0.08; par.y += (par.ty - par.y) * 0.08;
+    west.homeParallax = { x: par.x, y: par.y };
+    const sheet = document.querySelector('#home .sheet');
+    if (!sheet) return;
+    const f1 = Math.sin(t / 900), f2 = Math.sin(t / 1370 + 1.3);
+    sheet.style.translate = `${par.x * 22}px ${par.y * 14}px`;
+    sheet.style.rotate = `${(-par.y * 0.6 + f1 * 0.12).toFixed(3)} ${(par.x * 0.8 + f2 * 0.2).toFixed(3)} ${(f1 * 0.05).toFixed(3)} ${(4 + Math.abs(f1) * 1.5).toFixed(2)}deg`;
+  })(0);
 
   $('#addLocalBtn').addEventListener('click', () => { S.unlock(); wsSend({ t: 'addLocal' }); });
   $('#copyBtn').addEventListener('click', async () => {

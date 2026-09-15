@@ -79,11 +79,16 @@
     </div>
     <div class="together">
       <button class="btn" id="addLocalBtn">+ 이 기기에서 같이 하기</button>
-      <ul class="keys-note">
-        <li><span>둘이</span><kbd>SPACE</kbd><kbd>ENTER</kbd></li>
-        <li><span>셋이</span><kbd>A</kbd><kbd>SPACE</kbd><kbd>ENTER</kbd></li>
-        <li><span>넷이</span><kbd>A</kbd><kbd>SPACE</kbd><kbd>ENTER</kbd><kbd>좌클릭</kbd></li>
-      </ul>
+      <button class="help" id="helpBtn" aria-label="도움말" aria-expanded="false">?</button>
+      <div class="helpbox" id="helpBox" hidden>
+        <p class="hb-title">한 기기에서 같이 할 때 키</p>
+        <ul class="keys-note">
+          <li><span>둘이</span><kbd>SPACE</kbd><kbd>ENTER</kbd></li>
+          <li><span>셋이</span><kbd>A</kbd><kbd>SPACE</kbd><kbd>ENTER</kbd></li>
+          <li><span>넷이</span><kbd>A</kbd><kbd>SPACE</kbd><kbd>ENTER</kbd><kbd>좌클릭</kbd></li>
+        </ul>
+        <p class="hb-note">빈 자리를 누르면 봇을 앉히고, 다른 사람 수배서를 누르면 방장을 넘기거나 내보낼 수 있어요.</p>
+      </div>
     </div>
     <p class="rules-note" id="rulesNote"></p>
     <span class="err" id="lobbyErr"></span>
