@@ -457,7 +457,7 @@
       // 글자 — 칼 전엔 총구 불빛에만 비치고, 벤 뒤엔 칼자국을 따라 엇갈린다
       ctx.save();
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.font = `900 ${fs}px ${FONT_T}`;
+      ctx.font = this.titleFont ? this.titleFont(fs) : `900 ${fs}px ${FONT_T}`;
       const w0 = ctx.measureText('결').width, w1 = ctx.measureText('투').width;
       const gap = fs * 0.06;
       const x0 = cx - (w0 + w1 + gap) / 2 + w0 / 2;
@@ -535,20 +535,38 @@
         ctx.restore();
         this.sparks = this.sparks.filter(p => p.age < p.life);
       }
-      // DUEL · 금빛 줄
-      const le = easeOut((a - CL - 100) / 600);
+      // DUEL — 두 글자 폭에 맞춘 가는 줄 사이에, 글자와 같은 빛깔로
+      const le = easeOut((a - CL - 100) / 650);
       if (le > 0) {
-        const y = cy + fs * 0.78;
-        const halfW = fs * 1.05 * le;
-        ctx.fillStyle = `rgba(201,161,94,${0.9 * le})`;
-        ctx.fillRect(cx - halfW, y, halfW - fs * 0.34, Math.max(1, fs * 0.012));
-        ctx.fillRect(cx + fs * 0.34, y, halfW - fs * 0.34, Math.max(1, fs * 0.012));
+        const y = cy + fs * 0.66;
+        const left = x0 - w0 / 2 + fs * 0.03, right = x1 + w1 / 2 - fs * 0.03;
         ctx.save();
-        ctx.globalAlpha = le;
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.font = `${fs * 0.13}px ${FONT_W}`;
-        ctx.fillStyle = '#c9a15e';
-        ctx.fillText('D U E L', cx, y + fs * 0.01);
+        ctx.font = `${fs * 0.15}px ${FONT_W}`;
+        const word = 'D U E L';
+        const tw = ctx.measureText(word).width;
+        const pad = fs * 0.1;
+        const lh = Math.max(1, fs * 0.01);
+        // 줄은 가운데에서 바깥으로 그어지고, 끝으로 갈수록 옅어진다
+        const reachL = lerp(cx - tw / 2 - pad, left, le), reachR = lerp(cx + tw / 2 + pad, right, le);
+        const gl = ctx.createLinearGradient(left, 0, cx - tw / 2 - pad, 0);
+        gl.addColorStop(0, 'rgba(220,194,154,0)'); gl.addColorStop(1, 'rgba(220,194,154,.9)');
+        ctx.fillStyle = gl; ctx.fillRect(reachL, y - lh / 2, cx - tw / 2 - pad - reachL, lh);
+        const gr = ctx.createLinearGradient(cx + tw / 2 + pad, 0, right, 0);
+        gr.addColorStop(0, 'rgba(220,194,154,.9)'); gr.addColorStop(1, 'rgba(220,194,154,0)');
+        ctx.fillStyle = gr; ctx.fillRect(cx + tw / 2 + pad, y - lh / 2, reachR - cx - tw / 2 - pad, lh);
+        // 줄 안쪽 끝의 작은 마름모
+        ctx.fillStyle = `rgba(220,194,154,${le})`;
+        for (const dx of [-(tw / 2 + pad * 0.5), tw / 2 + pad * 0.5]) {
+          const r = fs * 0.018;
+          ctx.beginPath(); ctx.moveTo(cx + dx, y - r); ctx.lineTo(cx + dx + r, y); ctx.lineTo(cx + dx, y + r); ctx.lineTo(cx + dx - r, y); ctx.closePath(); ctx.fill();
+        }
+        ctx.globalAlpha = le;
+        const dg = ctx.createLinearGradient(0, y - fs * 0.08, 0, y + fs * 0.08);
+        dg.addColorStop(0, '#f1dfbf'); dg.addColorStop(1, '#b8945f');
+        ctx.fillStyle = dg;
+        ctx.shadowColor = 'rgba(0,0,0,.7)'; ctx.shadowBlur = fs * 0.04; ctx.shadowOffsetY = fs * 0.012;
+        ctx.fillText(word, cx, y + fs * 0.005);
         ctx.restore();
       }
     }

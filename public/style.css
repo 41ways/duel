@@ -47,8 +47,22 @@ body[data-view="title"] #title, body[data-view="home"] #home, body[data-view="ov
 .btn.primary:hover { background: #6e1f13; border-color: #6e1f13; }
 .btn.big { padding: 14px 44px; font-size: 24px; }
 .btn.slim { padding: 5px 10px; font-size: 13px; border-width: 2px; }
-#startGameBtn { -webkit-mask: none; mask: none; box-shadow: 0 10px 30px #000a; }
-#startGameBtn:hover { transform: scale(1.05); }
+/* 게임 시작 — 붉은 덩어리 대신 제목과 같은 빛깔의 글자, 위아래 가는 줄 */
+#title #startGameBtn {
+  -webkit-mask: none; mask: none; border: 0; box-shadow: none;
+  background: radial-gradient(ellipse at center, #0a0603cc 0%, #0a060388 45%, #0000 72%);
+  color: #e6d2a6; font: 900 22px var(--kr); letter-spacing: .42em;
+  padding: 16px 30px 16px calc(30px + .42em);
+  text-shadow: 0 2px 10px #000;
+  transition: opacity .6s, letter-spacing .25s, color .2s, text-shadow .2s;
+}
+#title #startGameBtn::before, #title #startGameBtn::after {
+  content: ""; position: absolute; left: 8%; right: 8%; height: 1px; transform: none;
+  background: linear-gradient(90deg, #0000, #dcc29acc 25%, #dcc29acc 75%, #0000);
+}
+#title #startGameBtn::before { top: 4px; }
+#title #startGameBtn::after { bottom: 4px; }
+#title #startGameBtn:hover { color: #fff3d6; letter-spacing: .55em; text-shadow: 0 0 18px #ffd28c99, 0 2px 10px #000; background: radial-gradient(ellipse at center, #0a0603cc 0%, #0a060388 45%, #0000 72%); }
 .back { position: fixed; left: 76px; top: 12px; z-index: 6; border: 0; cursor: pointer; padding: 8px 14px; background: #24160ce0; color: var(--paper); font: 900 14px var(--kr); clip-path: polygon(10px 0, 100% 0, 100% 100%, 10px 100%, 0 50%); }
 .back:hover { background: var(--red); }
 .link { border: 0; background: #0000; cursor: pointer; font: 700 14px var(--kr); color: var(--ink); opacity: .8; }
