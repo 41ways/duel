@@ -181,7 +181,7 @@
 
   /** img/sakura.webp 는 체크무늬 배경이 박힌 그림이라, 분홍빛만 남기고 꽃 한 송이 · 꽃잎 세 장을 잘라 둔다 */
   P.samPetalSprites = function () {
-    for (const n of ['sam_lobby_bg', 'sam_red_man', 'sam_blue_back', 'sam_death1', 'sam_death2', 'sam_stand']) this.samImg(n);   // 대기실 · 결과 그림도 미리
+    for (const n of ['sam_lobby_bg', 'sam_red_man', 'sam_blue_back', 'sam_death1', 'sam_death2', 'sam_death3', 'sam_death4', 'sam_stand']) this.samImg(n);   // 대기실 · 결과 그림도 미리
     if (this._petals) return this._petals;
     if (!this._sakuraImg) {
       const img = this._sakuraImg = new Image();
@@ -1051,19 +1051,16 @@
   };
 
   // 스쳐 지나간 뒤의 흐름(스쳐 지나간 순간부터 ms)
-  //   엇갈림 → 돌아서 다시 마주 봄 → 진 쪽이 무릎 → 이긴 쪽이 다가가 할복검을 건넴 → 받고 → 쓰러짐 → (영상처럼) 이긴 쪽 등 뒤로 넘어가 빛과 함께 승자
+  //   엇갈림 → 돌아서 다시 마주 봄 → 진 쪽이 무릎 → 목을 감쌈 → 피를 흘리며 고꾸라짐 → 쓰러짐 → (영상처럼) 이긴 쪽 등 뒤로 넘어가 빛과 함께 승자
   const X = {
     cross: 560,      // 둘이 서로를 스쳐 반대편으로
     turn: 900,       // 돌아서기 시작
     turnDur: 420,
     kneel: 1700,     // 진 쪽이 털썩 무릎 꿇는다(캄캄해 누군지 모른다)
-    clutch: 2150,    // 목을 감싼다
-    approach: 2700,  // 이긴 쪽이 천천히 다가간다
-    hand: 3600,      // 할복검(단도)을 두 손으로 내민다
-    take: 4300,      // 진 쪽 손에 건네진다
-    back: 4550,      // 이긴 쪽이 물러선다
-    fall: 5200,      // 진 쪽이 앞으로 무너진다
-    cut: 6050,       // 이긴 쪽 등 뒤로 컷이 넘어간다
+    clutch: 2250,    // 목을 감싼다
+    slump: 3050,     // 피를 흘리며 고개가 앞으로 떨어진다
+    fall: 3900,      // 앞으로 무너진다
+    cut: 4800,       // 이긴 쪽 등 뒤로 컷이 넘어간다
     drawReveal: 1900,
   };
 
@@ -1092,8 +1089,7 @@
     }
     if (winId == null) { at(X.cross - 80, () => this.samSparkBurst()); return; }
     at(X.kneel, () => S && S.thud(0.55));
-    for (let i = 0; i < 3; i++) at(X.approach + 120 + i * 280, () => S && S.step(0.35));
-    at(X.take - 60, () => S && S.clink());
+    at(X.slump, () => S && S.thud(0.3));
     at(X.fall + 520, () => { S && S.thud(1); this.shakeIt(120, 4); });
     at(X.cut + 500, () => this.samGust());
   };
@@ -1412,22 +1408,7 @@
     }
   };
 
-  /** 할복검(단도) — 칼집에 든 짧은 칼. x,y 가운데, ang 방향, L 길이, lit 0~1 */
-  P.samTanto = function (x, y, ang, L, lit) {
-    const { ctx } = this;
-    ctx.save();
-    ctx.translate(x, y); ctx.rotate(ang);
-    // 칼집(검은 옻칠) · 코등이 · 손잡이(흰 끈)
-    ctx.fillStyle = `rgb(${lerp(10, 26, lit)},${lerp(10, 22, lit)},${lerp(14, 24, lit)})`;
-    ctx.fillRect(-L * 0.5, -L * 0.035, L * 0.62, L * 0.07);
-    ctx.fillStyle = `rgb(${lerp(20, 170, lit)},${lerp(20, 140, lit)},${lerp(24, 80, lit)})`;
-    ctx.fillRect(L * 0.12, -L * 0.055, L * 0.025, L * 0.11);
-    ctx.fillStyle = `rgb(${lerp(26, 220, lit)},${lerp(28, 214, lit)},${lerp(34, 200, lit)})`;
-    ctx.fillRect(L * 0.145, -L * 0.03, L * 0.33, L * 0.06);
-    ctx.restore();
-  };
-
-  /** 스쳐 지나간 뒤 — 옆모습 두 사람: 엇갈림 → 돌아서 마주 봄 → 진 쪽 무릎 → 할복검을 건넴 → 쓰러짐. 비기면 불똥 뒤 빛이 돌아온다 */
+  /** 스쳐 지나간 뒤 — 옆모습 두 사람: 엇갈림 → 돌아서 마주 봄 → 진 쪽 무릎 · 목을 감쌈 · 고꾸라짐 → 쓰러짐. 비기면 불똥 뒤 빛이 돌아온다 */
   P.drawSamCross = function (t, b) {
     const { ctx, W, H } = this;
     const m = this.match, res = m.res;
@@ -1463,14 +1444,7 @@
       s.face = turnP < 0.5 ? s.dir : -s.dir;      // 반쯤 돌았을 때 방향이 바뀐다
       s.sx = Math.max(0.08, Math.abs(Math.cos(turnP * Math.PI)));   // 돌아서는 동안 옆으로 얇아졌다가 넓어진다
     }
-    const ws = seats.find(s => s.p && s.p.id === win), ls = seats.find(s => s.p && s.p.id === res.loserId);
-    // 이긴 쪽이 다가갔다가 건네고 물러선다
-    if (ws && ls) {
-      const gap = Math.abs(ws.x - ls.x), near = fh * 0.46;
-      const go = easeIO((b - X.approach) / (X.hand - X.approach)) * (1 - easeIO((b - X.back) / 600) * 0.45);
-      ws.x += Math.sign(ls.x - ws.x) * (gap - near) * go;
-      ws.walk = b > X.approach && b < X.hand ? Math.abs(Math.sin((b - X.approach) / 280 * Math.PI)) : 0;
-    }
+    const ls = seats.find(s => s.p && s.p.id === res.loserId);
     // 속도선 · 잔상
     if (b < X.cross + 120) {
       const k = 1 - clamp((b - X.cross) / 120);
@@ -1485,7 +1459,7 @@
     const pose = (name, s, lit, h, cut) => {
       ctx.save();
       ctx.translate(s.x, 0); ctx.scale(s.sx, 1); ctx.translate(-s.x, 0);
-      this.samDrawPose(name, s.p.char, s.face > 0, lit, s.x, gy - (s.walk || 0) * fh * 0.012, h, cut);
+      this.samDrawPose(name, s.p.char, s.face > 0, lit, s.x, gy, h, cut);
       ctx.restore();
     };
     for (const s of seats) {
@@ -1503,25 +1477,30 @@
         ctx.globalAlpha = 1;
       }
       if (!lost || b < X.kneel) { pose('sam_stand', s, reveal, fh, 0.9); continue; }
-      // 진 쪽 — 이긴 쪽을 보고 무릎 → 목을 감쌈 → 할복검을 받아 무릎 위에 → 앞으로 무너짐
+      // 진 쪽 — 이긴 쪽을 보고 무릎 → 목을 감쌈 → 피를 흘리며 고꾸라짐 → 앞으로 무너짐(겹쳐서 스르르 바뀐다)
       const kb = b - X.kneel;
-      const kh = fh * 0.72 * lerp(1.12, 1, easeOut(kb / 220));
-      const fall = easeIn((b - X.fall) / 750);
-      const clutch = clamp((b - X.clutch) / 260) * (1 - clamp((b - X.take + 200) / 300));
+      const kh = fh * 0.74 * lerp(1.12, 1, easeOut(kb / 220));
+      const fall = clamp((b - X.fall) / 650);
+      const clutch = clamp((b - X.clutch) / 300);
+      const slump = clamp((b - X.slump) / 450);
+      const flip = s.face > 0;
+      const k = kh / 675;                                    // 무릎 그림(sam_death1~3) 원본 높이 675
+      const knee = s.x + s.face * 70 * k;                    // 무릎 자리 — 누운 그림을 여기에 맞춘다
+      // 고꾸라진 채 앞으로 기울다가, 누운 모습(sam_death4)으로 스르르 바뀐다
+      const tip = easeIn(fall);
       ctx.save();
-      ctx.translate(s.x, gy); ctx.rotate(s.face * fall * 1.3); ctx.translate(-s.x, -gy);
-      this.samDrawPose('sam_death1', s.p.char, s.face > 0, 0, s.x, gy, kh);
-      if (clutch > 0) { ctx.globalAlpha = clutch; this.samDrawPose('sam_death2', s.p.char, s.face > 0, 0, s.x, gy, kh); ctx.globalAlpha = 1; }
-      if (b >= X.take) this.samTanto(s.x + s.face * kh * 0.2, gy - kh * 0.36, s.face > 0 ? 0 : Math.PI, fh * 0.2, 0.55);
+      ctx.translate(knee, gy); ctx.rotate(s.face * tip * 0.55); ctx.translate(-knee, -gy);
+      ctx.globalAlpha = 1 - easeIO((fall - 0.35) / 0.55);
+      if (slump < 1) this.samDrawPose(clutch < 1 ? 'sam_death1' : 'sam_death2', s.p.char, flip, 0, s.x, gy, kh);
+      if (clutch > 0 && clutch < 1) { ctx.globalAlpha *= clutch; this.samDrawPose('sam_death2', s.p.char, flip, 0, s.x, gy, kh); ctx.globalAlpha /= clutch; }
+      if (slump > 0) { ctx.globalAlpha *= slump; this.samDrawPose('sam_death3', s.p.char, flip, 0, s.x, gy, kh); }
       ctx.restore();
-    }
-    // 할복검을 건넴 — 이긴 쪽 허리께에서 두 손으로 내밀어, 진 쪽 무릎 위로 천천히 옮겨 간다
-    if (ws && ls && b >= X.hand && b < X.take) {
-      const p = easeIO((b - X.hand) / (X.take - X.hand));
-      const kh = fh * 0.72;
-      const sx = ws.x + ws.face * fh * 0.2, sy = gy - fh * 0.47;
-      const ex = ls.x + ls.face * kh * 0.2, ey = gy - kh * 0.36;
-      this.samTanto(lerp(sx, ex, p), lerp(sy, ey, p) - Math.sin(p * Math.PI) * fh * 0.03, ls.face > 0 ? 0 : Math.PI, fh * 0.2, 0.55);
+      if (fall > 0.35) {
+        // 누운 그림(1140×440) — 무릎(원본 x 830)을 무릎 자리에, 몸이 닿는 선(원본 y 370)을 땅에
+        ctx.globalAlpha = easeIO((fall - 0.35) / 0.55);
+        this.samDrawPose('sam_death4', s.p.char, flip, 0, knee + s.face * 260 * k, gy + 70 * k, 440 * k);
+        ctx.globalAlpha = 1;
+      }
     }
     // 칼을 뽑는 순간 — 흰 빛줄기 두 갈래와 주황 불똥(발도술 gif의 마지막)
     if (b < 420) {
@@ -1564,19 +1543,16 @@
     ctx.save();
     this.samCam(lerp(700, 690, easeOut(c / 4000)), 470, lerp(1.1, 1.04, easeOut(c / 4000)));
     ctx.drawImage(this.img.mode_samurai_bg, 0, 0, BGW, BGH);
-    // 쓰러진 진 쪽 — 무릎 꿇은 채 앞으로 엎어져 있다. 곁에 할복검
-    const d1 = this.samDeath(loser.char, 1);
-    if (d1) {
-      const h = OPP.h * 0.86, w = d1.width * h / d1.height;
+    // 쓰러진 진 쪽 — 피 흘리며 엎어져 누워 있다
+    const d4 = this.samDeath(loser.char, 4);
+    if (d4) {
+      const k = OPP.h * 0.86 / 675;
+      const h = 440 * k, w = d4.width * h / d4.height;
       const x = OPP.x, y = OPP.y + 4;
-      const cs = ctx.createRadialGradient(x - h * 0.2, y, 0, x - h * 0.2, y, h * 0.7);
-      cs.addColorStop(0, 'rgba(8,10,18,.6)'); cs.addColorStop(1, 'rgba(8,10,18,0)');
-      ctx.fillStyle = cs; ctx.beginPath(); ctx.ellipse(x - h * 0.2, y, h * 0.7, h * 0.08, 0, 0, TAU); ctx.fill();
-      ctx.save();
-      ctx.translate(x, y); ctx.rotate(-1.3);
-      ctx.drawImage(d1, -w / 2, -h, w, h);
-      ctx.restore();
-      this.samTanto(x + h * 0.5, y - h * 0.05, 0.15, h * 0.28, light);
+      const cs = ctx.createRadialGradient(x, y, 0, x, y, w * 0.55);
+      cs.addColorStop(0, 'rgba(8,10,18,.55)'); cs.addColorStop(1, 'rgba(8,10,18,0)');
+      ctx.fillStyle = cs; ctx.beginPath(); ctx.ellipse(x, y, w * 0.55, h * 0.12, 0, 0, TAU); ctx.fill();
+      ctx.drawImage(d4, x - w / 2, y - h + 70 * k, w, h);
     }
     ctx.restore();
     ctx.fillStyle = `rgba(2,3,7,${lerp(0.88, 0.3, light)})`; ctx.fillRect(0, 0, W, H);
