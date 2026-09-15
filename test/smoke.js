@@ -105,6 +105,7 @@ async function check(name, fn) {
   await check('신호 → 쏘기 → 판정', async () => {
     // 앞 시험들이 도는 동안 판이 이미 몇 라운드 지났을 수 있다 — 새 신호부터 본다
     a.inbox.length = 0; b.inbox.length = 0;
+    tx(a, { t: 'again', now: true });                 // 이미 끝났으면 바로 한 판 더
     const sig = await waitFor(a, m => m.t === 'ev' && m.ev.k === 'signal', 30000, 'signal');
     tx(a, { t: 'shoot', r: sig.ev.r, ms: 150 });
     tx(b, { t: 'shoot', r: sig.ev.r, ms: 400 });
