@@ -3,12 +3,12 @@
  *
  * 그림은 전부 이미지(img/)에서 온다. 코드는 자르고 · 옮기고 · 번쩍이기만 한다.
  *   plate.jpg  사람을 지운 결투장 (1408×768)
- *   fore1.png  앞에 선 판초 뒷모습 (plate 좌표 64,15)
- *   gunN.png   총잡이 전신,  gunN_bust.png 가슴 위
- *   weed.png   회전초,  low.jpg 낮은 카메라 배경,  title.jpg 시작 화면
+ *   back.png   앞에 선 판초 뒷모습,  back_arm.png 총 드는 오른 아래팔
+ *   gunN.png   총잡이 전신,  gunN_far.png 멀리 선 모습(대기 색),  gunN_bust.png 가슴 위
+ *   weed.png   회전초,  low.jpg 낮은 카메라 배경
  *
  * 흐름
- *   title → field(처음 · 대기실) → [회전초] → versus(번개 선수 소개) → [회전초] → duel
+ *   title(총과 칼이 부딪혀 로고) → field(처음 · 대기실) → [회전초] → versus(번개 선수 소개) → [회전초] → duel
  *   → 총성 × 상대 수 → 암전 → fall(무릎 · 쓰러짐, 다리 쪽 낮은 카메라) → 먼지 → reveal(멀리 승자 · 이름)
  */
 (function (root) {
@@ -68,8 +68,8 @@
     }
 
     async loadAll() {
-      const names = ['plate.jpg', 'fore1.png', 'weed.png', 'low.jpg', 'title.jpg',
-        ...CHARS.flatMap(c => [`${c.key}.png`, `${c.key}_bust.png`])];
+      const names = ['plate.jpg', 'back.png', 'back_arm.png', 'weed.png', 'low.jpg',
+        ...CHARS.flatMap(c => [`${c.key}.png`, `${c.key}_far.png`, `${c.key}_bust.png`])];
       const imgs = await Promise.all(names.map(n => load('/img/' + n)));
       names.forEach((n, i) => { this.img[n.replace(/\.\w+$/, '')] = imgs[i]; });
       this.sil = CHARS.map((c, i) => this.silhouette(this.img[c.key], i));
@@ -121,7 +121,13 @@
 
     /* ═════════════════════ 바깥에서 부르는 것 ═════════════════════ */
 
-    title() { this.clearTimers(); this.view = 'title'; this.viewAt = now(); this.match = null; }
+    title() {
+      this.clearTimers(); this.view = 'title'; this.viewAt = now(); this.match = null;
+      this.titleHit = false; this.sparks = [];
+    }
+    /** 시작 화면 연출을 건너뛴다 */
+    skipTitle() { if (this.view === 'title' && now() - this.viewAt < 1500) this.viewAt = now() - 1500; }
+    get titleDone() { return this.view !== 'title' || now() - this.viewAt > 1300; }
 
     /**
      * 처음 화면 · 대기실. others: [{id, char}] — 새로 온 사람은 지평선에서 걸어 나오고, 나간 사람은 돌아 걸어간다.
@@ -298,6 +304,7 @@
 
     loop() {
       const t = now();
+      if (this.cv.clientWidth !== Math.round(this.W) || this.cv.clientHeight !== Math.round(this.H)) this.resize();
       const dt = Math.min(0.05, (t - this.last) / 1000);
       this.last = t;
       this.update(t, dt);
@@ -306,7 +313,7 @@
     }
 
     update(t, dt) {
-      const busy = this.view === 'field' || this.view === 'duel' || this.view === 'title';
+      const busy = this.view === 'field' || this.view === 'duel';
       if (busy && t > this.nextWeed) {
         if (this.weeds.filter(w => w.s < 1).length < 2) this.spawnWeed(false);
         this.nextWeed = t + 4000 + Math.random() * 6000;
@@ -360,7 +367,7 @@
         case 'reveal': this.drawReveal(t); break;
       }
       ctx.restore();
-      if (this.view !== 'versus' && this.view !== 'black') this.drawGrade(t);
+      if (this.view !== 'versus' && this.view !== 'black' && this.view !== 'title') this.drawGrade(t);
       this.drawFlashes(t);
       this.drawTexts(t);
       this.drawWipe(t);
@@ -368,12 +375,215 @@
 
     /* ─────────── 시작 화면 ─────────── */
 
+    /**
+     * 시작 화면 — 권총과 칼이 양쪽에서 날아와 가운데서 부딪히고, 불꽃 속에서 로고가 찍힌다.
+     *  0–650 날아옴 · 650 충돌(섬광 · 불꽃 · 소리) · 650–1300 X자로 물러나 자리 잡음 · 800– 로고
+     */
     drawTitle(t) {
-      const { ctx } = this;
-      const k = ((t - (this.viewAt || 0)) / 26000) % 1;
+      const { ctx, W, H } = this;
+      const a = t - this.viewAt - 250;
+      const HIT = 650;
+      const U = Math.min(W, H * 1.5) * 0.36;
+      const cx = W / 2, cy = H * 0.44;
+      // 어두운 바탕 · 가운데 불빛
+      const bg = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(W, H) * 0.75);
+      const heat = a > HIT ? 0.6 + 0.4 * Math.exp(-(a - HIT) / 700) : 0.35;
+      bg.addColorStop(0, `rgba(${Math.round(90 * heat + 20)},${Math.round(45 * heat + 12)},18,1)`);
+      bg.addColorStop(0.55, '#140c08');
+      bg.addColorStop(1, '#050303');
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, W, H);
+      if (!this.titleHit && a >= HIT) {
+        this.titleHit = true;
+        this.shakeIt(380, 18);
+        this.flashes.push({ at: t, dur: 220 });
+        if (this.S) { this.S.clash(); this.S.shot(false); }
+        for (let i = 0; i < 90; i++) {
+          const ang = Math.random() * TAU, sp = (0.3 + Math.random()) * U * 3.2;
+          this.sparks.push({ x: cx, y: cy, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp - U * 0.4, age: 0, life: 0.4 + Math.random() * 0.9 });
+        }
+      }
+      // 날아오기 → 부딪힘 → 되튕겨 X자
+      const inP = easeIn(a / HIT);
+      const back = easeOut((a - HIT) / 650);
+      // 끝자리: 두 무기의 가운데가 로고 뒤에서 X 로 겹친다
+      const gR = -0.55, sR = 0.55, gL = U * 1.05, sL = U * 1.0;
+      const gEnd = { x: cx - Math.cos(gR) * 0.3 * gL, y: cy - Math.sin(gR) * 0.3 * gL + U * 0.02, r: gR };
+      const sEnd = { x: cx + Math.cos(sR) * 0.62 * sL, y: cy + Math.sin(sR) * 0.62 * sL - U * 0.02, r: sR };
+      const hitG = { x: cx - U * 0.42, y: cy + U * 0.05, r: -0.12 };
+      const hitS = { x: cx + U * 0.36, y: cy - U * 0.05, r: 0.28 };
+      const mix = (p, q, k, bump) => ({ x: lerp(p.x, q.x, k) + bump, y: lerp(p.y, q.y, k), r: lerp(p.r, q.r, k) });
+      const gun = a < HIT
+        ? mix({ x: -U * 1.4, y: H * 0.9, r: 1.2 }, hitG, inP, 0)
+        : mix(hitG, gEnd, back, -Math.sin(back * Math.PI) * U * 0.25);
+      const sw = a < HIT
+        ? mix({ x: W + U * 1.6, y: -H * 0.1, r: -1.0 }, hitS, inP, 0)
+        : mix(hitS, sEnd, back, Math.sin(back * Math.PI) * U * 0.25);
+      const gScale = lerp(U * 0.82, gL, back), sScale = lerp(U, sL, back);
+      const gleam = ((t - this.viewAt) % 3200) / 3200;
+      if (a > -250) {
+        this.drawSword(sw.x, sw.y, sScale, sw.r, gleam);
+        this.drawRevolver(gun.x, gun.y, gScale, gun.r, gleam);
+      }
+      // 불꽃
+      const dt = 1 / 60;
       ctx.save();
-      this.plateCam(lerp(700, 760, k), 384, 1.02 + k * 0.08);
-      ctx.drawImage(this.img.title, 0, 0, PW, PH);
+      ctx.globalCompositeOperation = 'lighter';
+      for (const p of this.sparks) {
+        p.age += dt; p.vx *= 0.94; p.vy = p.vy * 0.94 + U * 0.06; p.x += p.vx * dt; p.y += p.vy * dt;
+        const k = 1 - p.age / p.life;
+        if (k <= 0) continue;
+        ctx.strokeStyle = `rgba(255,${Math.round(170 + 80 * k)},${Math.round(90 * k)},${k})`;
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x - p.vx * 0.03, p.y - p.vy * 0.03); ctx.stroke();
+      }
+      this.sparks = this.sparks.filter(p => p.age < p.life);
+      // 충격파
+      if (a > HIT && a < HIT + 500) {
+        const k = (a - HIT) / 500;
+        ctx.strokeStyle = `rgba(255,220,160,${0.6 * (1 - k)})`;
+        ctx.lineWidth = U * 0.05 * (1 - k);
+        ctx.beginPath(); ctx.arc(cx, cy, U * 2.2 * easeOut(k), 0, TAU); ctx.stroke();
+      }
+      ctx.restore();
+      // 불티 — 계속 올라간다
+      if (a > HIT) {
+        if (!this.embers) this.embers = Array.from({ length: 50 }, () => ({ x: Math.random(), y: Math.random(), v: 0.02 + Math.random() * 0.05, r: 0.8 + Math.random() * 1.8, ph: Math.random() * TAU }));
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        for (const e of this.embers) {
+          e.y -= e.v * dt; if (e.y < -0.05) { e.y = 1.05; e.x = Math.random(); }
+          const flick = 0.5 + 0.5 * Math.sin(t / 180 + e.ph);
+          ctx.fillStyle = `rgba(255,${140 + Math.round(flick * 60)},60,${0.35 * flick * clamp((a - HIT) / 800)})`;
+          ctx.beginPath(); ctx.arc((e.x + Math.sin(t / 2000 + e.ph) * 0.02) * W, e.y * H, e.r, 0, TAU); ctx.fill();
+        }
+        ctx.restore();
+      }
+      // 로고
+      const le = easeOut((a - HIT - 120) / 380);
+      if (le > 0) {
+        const fs = Math.min(W * 0.26, H * 0.34);
+        ctx.save();
+        ctx.translate(cx, cy + fs * 0.08);
+        const sc = lerp(1.7, 1, le);
+        ctx.scale(sc, sc);
+        ctx.globalAlpha = clamp(le * 1.6);
+        // 로고는 따로 그려 두고 빛줄기는 글자 안에만
+        const logo = this.logoCanvas(fs, gleam);
+        ctx.drawImage(logo, -logo.width / 2, -logo.height / 2);
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.font = `${fs * 0.17}px ${FONT_W}`;
+        ctx.fillStyle = '#e8b85a';
+        const spaced = 'D U E L';
+        ctx.fillText(spaced, 0, fs * 0.66);
+        ctx.restore();
+      }
+    }
+
+    logoCanvas(fs, gleam) {
+      const c = this._logo || (this._logo = document.createElement('canvas'));
+      const w = Math.ceil(fs * 2.6), h = Math.ceil(fs * 1.4);
+      if (c.width !== w || c.height !== h) { c.width = w; c.height = h; }
+      const g = c.getContext('2d');
+      g.clearRect(0, 0, w, h);
+      g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.font = `${fs}px ${FONT_T}`;
+      g.lineJoin = 'round';
+      g.lineWidth = fs * 0.12; g.strokeStyle = '#1a0c05';
+      g.strokeText('결투', w / 2, h / 2);
+      const gr = g.createLinearGradient(0, h / 2 - fs * 0.5, 0, h / 2 + fs * 0.5);
+      gr.addColorStop(0, '#fff3cf'); gr.addColorStop(0.45, '#e9b45a'); gr.addColorStop(0.55, '#b86a24'); gr.addColorStop(1, '#6e3510');
+      g.fillStyle = gr;
+      g.fillText('결투', w / 2, h / 2);
+      g.globalCompositeOperation = 'source-atop';
+      const gx = lerp(-fs * 0.5, w + fs * 0.5, gleam);
+      const sh = g.createLinearGradient(gx - fs * 0.3, 0, gx + fs * 0.3, 0);
+      sh.addColorStop(0, 'rgba(255,255,255,0)'); sh.addColorStop(0.5, 'rgba(255,255,255,.55)'); sh.addColorStop(1, 'rgba(255,255,255,0)');
+      g.fillStyle = sh; g.fillRect(0, 0, w, h);
+      g.globalCompositeOperation = 'source-over';
+      return c;
+    }
+
+    /** 옆에서 본 권총 — 총구가 +x. 크기 L */
+    drawRevolver(x, y, L, rot, gleam) {
+      const { ctx } = this;
+      ctx.save();
+      ctx.translate(x, y); ctx.rotate(rot); ctx.scale(L, L);
+      ctx.lineJoin = 'round';
+      const steel = ctx.createLinearGradient(0, -0.16, 0, 0.1);
+      steel.addColorStop(0, '#c9d0d6'); steel.addColorStop(0.35, '#6e767e'); steel.addColorStop(1, '#23272c');
+      // 손잡이
+      const wood = ctx.createLinearGradient(-0.35, 0, 0, 0.4);
+      wood.addColorStop(0, '#7a4a28'); wood.addColorStop(1, '#3a2010');
+      ctx.fillStyle = wood;
+      ctx.beginPath();
+      ctx.moveTo(-0.08, 0.02); ctx.bezierCurveTo(-0.14, 0.14, -0.26, 0.3, -0.3, 0.42);
+      ctx.quadraticCurveTo(-0.24, 0.5, -0.15, 0.46);
+      ctx.bezierCurveTo(-0.1, 0.32, -0.02, 0.18, 0.04, 0.07); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = '#1b0f07'; ctx.lineWidth = 0.012; ctx.stroke();
+      // 방아쇠울
+      ctx.strokeStyle = '#3a3f45'; ctx.lineWidth = 0.022;
+      ctx.beginPath(); ctx.arc(0.07, 0.07, 0.07, 0.1, Math.PI * 0.95); ctx.stroke();
+      ctx.fillStyle = '#2a2e33'; ctx.fillRect(0.05, 0.02, 0.015, 0.08);
+      // 뭉치 · 실린더 · 공이치기
+      ctx.fillStyle = steel;
+      ctx.beginPath();
+      ctx.moveTo(-0.14, -0.09); ctx.lineTo(0.22, -0.09); ctx.lineTo(0.24, 0.04); ctx.lineTo(0.02, 0.07); ctx.lineTo(-0.1, 0.05); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(-0.13, -0.08); ctx.lineTo(-0.22, -0.16); ctx.lineTo(-0.18, -0.18); ctx.lineTo(-0.08, -0.1); ctx.fill();
+      ctx.fillStyle = '#4b5259';
+      roundRectPath(ctx, -0.02, -0.12, 0.2, 0.16, 0.03); ctx.fill();
+      ctx.strokeStyle = 'rgba(20,22,25,.8)'; ctx.lineWidth = 0.008;
+      for (const yy of [-0.07, -0.03, 0.01]) { ctx.beginPath(); ctx.moveTo(0.0, yy); ctx.lineTo(0.16, yy); ctx.stroke(); }
+      // 총열
+      ctx.fillStyle = steel;
+      ctx.fillRect(0.2, -0.085, 0.62, 0.055);
+      ctx.fillRect(0.2, -0.03, 0.44, 0.03);
+      ctx.fillStyle = '#1d2024'; ctx.fillRect(0.78, -0.11, 0.025, 0.03);
+      // 번쩍
+      const gx = lerp(-0.3, 0.9, gleam);
+      const sh = ctx.createLinearGradient(gx - 0.08, 0, gx + 0.08, 0);
+      sh.addColorStop(0, 'rgba(255,255,255,0)'); sh.addColorStop(0.5, 'rgba(255,255,255,.45)'); sh.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = sh; ctx.fillRect(-0.2, -0.085, 1.05, 0.03);
+      ctx.restore();
+    }
+
+    /** 칼 — 칼끝이 -x, 손잡이가 +x. 길이 L */
+    drawSword(x, y, L, rot, gleam) {
+      const { ctx } = this;
+      ctx.save();
+      ctx.translate(x, y); ctx.rotate(rot); ctx.scale(L, L);
+      // 칼날 — 살짝 휜다
+      const blade = ctx.createLinearGradient(0, -0.04, 0, 0.03);
+      blade.addColorStop(0, '#f4f7fa'); blade.addColorStop(0.45, '#aeb7c0'); blade.addColorStop(1, '#5d666f');
+      ctx.fillStyle = blade;
+      ctx.beginPath();
+      ctx.moveTo(0.02, -0.032);
+      ctx.quadraticCurveTo(-0.8, -0.075, -1.55, -0.02);
+      ctx.lineTo(-1.62, 0.0);
+      ctx.quadraticCurveTo(-0.8, -0.02, 0.02, 0.018);
+      ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineWidth = 0.006;
+      ctx.beginPath(); ctx.moveTo(0, -0.028); ctx.quadraticCurveTo(-0.8, -0.07, -1.5, -0.018); ctx.stroke();
+      // 칼날 위 빛
+      const gx = lerp(-1.7, 0.2, gleam);
+      const sh = ctx.createLinearGradient(gx - 0.15, 0, gx + 0.15, 0);
+      sh.addColorStop(0, 'rgba(255,255,255,0)'); sh.addColorStop(0.5, 'rgba(255,255,255,.8)'); sh.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.fillStyle = sh;
+      ctx.beginPath(); ctx.moveTo(0.02, -0.032); ctx.quadraticCurveTo(-0.8, -0.075, -1.55, -0.02); ctx.lineTo(-1.62, 0); ctx.quadraticCurveTo(-0.8, -0.02, 0.02, 0.018); ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
+      // 날밑 · 손잡이
+      ctx.fillStyle = '#b8903a';
+      ctx.beginPath(); ctx.ellipse(0.03, -0.007, 0.022, 0.085, 0, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#1b1614';
+      roundRectPath(ctx, 0.05, -0.036, 0.46, 0.058, 0.02); ctx.fill();
+      ctx.fillStyle = '#d9cdb4';
+      for (let i = 0; i < 7; i++) {
+        const px = 0.08 + i * 0.06;
+        ctx.beginPath(); ctx.moveTo(px, -0.007); ctx.lineTo(px + 0.022, -0.03); ctx.lineTo(px + 0.044, -0.007); ctx.lineTo(px + 0.022, 0.016); ctx.closePath(); ctx.fill();
+      }
+      ctx.fillStyle = '#8a6a2a'; ctx.fillRect(0.5, -0.04, 0.03, 0.066);
       ctx.restore();
     }
 
@@ -411,7 +621,7 @@
 
     drawFar(char, x, y, { walk = 0, alpha = 1, smoke = 0 } = {}) {
       const { ctx } = this;
-      const img = this.img[CHARS[char].key];
+      const img = this.img[CHARS[char].key + '_far'] || this.img[CHARS[char].key];
       if (!img || alpha <= 0) return;
       const h = figH(y);
       const w = img.width * h / img.height;
@@ -420,8 +630,12 @@
       ctx.save();
       ctx.globalAlpha = alpha;
       // 그림자 — 원래 사진처럼 왼쪽 뒤로 길게
-      ctx.fillStyle = 'rgba(60,45,30,.28)';
-      ctx.beginPath(); ctx.ellipse(x - h * 0.3, y + 1, h * 0.36, h * 0.028, 0.02, 0, TAU); ctx.fill();
+      ctx.fillStyle = 'rgba(70,52,34,.22)';
+      ctx.beginPath(); ctx.ellipse(x - h * 0.28, y + 1, h * 0.34, h * 0.024, 0.02, 0, TAU); ctx.fill();
+      const cs = ctx.createRadialGradient(x, y, 0, x, y, h * 0.16);
+      cs.addColorStop(0, 'rgba(40,28,18,.45)'); cs.addColorStop(1, 'rgba(40,28,18,0)');
+      ctx.fillStyle = cs;
+      ctx.beginPath(); ctx.ellipse(x, y, h * 0.16, h * 0.03, 0, 0, TAU); ctx.fill();
       ctx.translate(x, y + bob);
       ctx.rotate(rot);
       ctx.drawImage(img, -w / 2, -h, w, h);
@@ -454,9 +668,8 @@
       ctx.translate(slide, breathe);
       const ch = this.fore.char;
       const ra = t - this.fore.raiseAt;
-      if (ch === 0 && this.img.fore1) {
-        ctx.drawImage(this.img.fore1, 64, 15);
-        if (ra >= 0 && ra < 900) this.drawRaise(ra);
+      if (ch === 0 && this.img.back) {
+        this.drawBack(ra);
       } else if (this.sil[ch]) {
         const s = this.sil[ch];
         const k = 2.35;
@@ -466,29 +679,38 @@
       ctx.restore();
     }
 
-    /** 판초 밑 손을 잘라서 총구가 상대를 향하게 휙 올린다 */
-    drawRaise(ra) {
+    /** 뒷모습 — 사진 속 판초처럼 크게. 누르면 오른 아래팔이 팔꿈치를 축으로 올라가 상대를 겨눈다 */
+    drawBack(ra) {
       const { ctx } = this;
-      const img = this.img.fore1;
-      const cx = 64, cy = 15;                  // fore1 이 놓인 자리
-      const sx = 350, sy = 560, sw = 181, sh = 193;
-      const pivot = { x: cx + 470, y: cy + 575 };
-      const e = easeOut(ra / 85);
-      const ang = -1.15 * e;
-      const ghosts = ra < 110 ? 3 : 1;
-      for (let g = ghosts; g >= 1; g--) {
-        const a = ang * (1 - (g - 1) * 0.18);
-        ctx.save();
-        ctx.globalAlpha = g === 1 ? 1 : 0.25;
-        ctx.translate(pivot.x, pivot.y);
-        ctx.rotate(a);
-        ctx.drawImage(img, sx, sy, sw, sh, cx + sx - pivot.x, cy + sy - pivot.y, sw, sh);
-        ctx.restore();
+      const img = this.img.back, arm = this.img.back_arm;
+      const K = 2.25, X0 = 330 - 143 * K, Y0 = 15 - 40 * K;
+      const elbow = { x: X0 + 273 * K, y: Y0 + 240 * K };
+      const raising = ra >= 0 && ra < 1000;
+      const e = raising ? easeOut(ra / 80) * (1 - easeIO((ra - 550) / 450)) : 0;
+      const ang = -0.95 * e;                          // 허리춤에서 뽑아 그대로 쏘는 높이
+      // 팔을 뒤에 먼저 — 몸이 팔꿈치 윗부분을 덮는다
+      if (arm) {
+        const ghosts = raising && ra < 100 ? [0.55, 0.8, 1] : [1];
+        for (const g of ghosts) {
+          ctx.save();
+          ctx.globalAlpha = g === 1 ? 1 : 0.3;
+          ctx.translate(elbow.x, elbow.y);
+          ctx.rotate(ang * g);
+          ctx.scale(K, K * lerp(1, 0.86, e));        // 앞으로 뻗으면 조금 짧아 보인다
+          ctx.drawImage(arm, -60, -20);
+          if (e > 0.2 && g === 1) {
+            // 손에 쥔 권총 (옆에서 본 실루엣)
+            this.drawRevolver(-2, 150, 62, Math.PI / 2 - 0.15, 0.5);
+          }
+          ctx.restore();
+        }
       }
-      // 총구
-      const tip = rotateP(cx + 470, cy + 740, pivot, ang);
-      if (!this.fore.misfire || ra < 200) this.drawMuzzle(tip.x + 30, tip.y - 6, 46, ra);
-      this.drawSmoke(tip.x + 30, tip.y - 6, 14, ra / 1000);
+      ctx.drawImage(img, X0, Y0, img.width * K, img.height * K);
+      if (raising) {
+        const tip = rotateP(elbow.x - 8 * K, elbow.y + 196 * K, elbow, ang);
+        if (!this.fore.misfire || ra < 200) this.drawMuzzle(tip.x, tip.y, 46, ra);
+        this.drawSmoke(tip.x, tip.y, 14, ra / 1000);
+      }
     }
 
     drawRaiseSil(ra) {
@@ -764,9 +986,9 @@
       ctx.fillStyle = '#080605'; ctx.fillRect(0, 0, W, bh2); ctx.fillRect(0, H - bh2, W, bh2);
     }
 
-    /** 쓰러지는 사람은 누군지 모르게 늘 같은 검은 실루엣(검은 옷)으로 — 역광 가장자리만 따뜻하게 */
+    /** 쓰러지는 사람은 누군지 모르게 늘 같은 검은 실루엣(뒷모습 다리)으로 — 역광 가장자리만 따뜻하게 */
     makeFallSil() {
-      const img = this.img.gun4;
+      const img = this.img.back;
       if (!img) return null;
       const P = 8;
       const c = document.createElement('canvas');
@@ -795,7 +1017,7 @@
       if (!this.fallSil) this.fallSil = this.makeFallSil();
       const sil = this.fallSil;
       if (!sil) return;
-      const WAIST = 300 + 8, KNEE = 505 + 8, FOOT = 662 + 8;
+      const WAIST = 330 + 8, KNEE = 512 + 8, FOOT = 680 + 8;
       const s = (H * 0.95) / (FOOT - WAIST) * lerp(1, 1.25, easeIO((f - 450) / 900));
       const L = (FOOT - KNEE) * s;
       const sway = f < 450 ? Math.sin(f / 65) * 0.03 * (f / 450) : 0;
@@ -809,7 +1031,6 @@
       ctx.translate(W * 0.5, gy);
       ctx.rotate(sway);
       ctx.transform(1, 0, -0.08, 1, 0, 0);     // 비스듬히 옆에서
-      ctx.scale(-1, 1);                        // 뒷모습
       ctx.translate(0, -gy);
       // 정강이 · 부츠
       ctx.drawImage(sil, 0, KNEE, sil.width, FOOT - KNEE, -w / 2, kneeY, w, shinH);
@@ -1036,6 +1257,14 @@
     ctx.arc(a.x, a.y, wa / 2, ang + Math.PI, ang + TAU);
     ctx.closePath();
     ctx.fill();
+  }
+
+  function roundRectPath(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y); ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r); ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h); ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r); ctx.quadraticCurveTo(x, y, x + r, y); ctx.closePath();
   }
 
   function makeBolts(n, W, H) {

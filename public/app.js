@@ -308,6 +308,9 @@
 
   west.title();
   view('title');
+  // 로고가 찍히고 나서 단추. 연출 도중에 누르면 건너뛴다
+  const titleT = setInterval(() => { if (west.titleDone) { document.body.classList.add('ready'); clearInterval(titleT); } }, 100);
+  $('#title').addEventListener('pointerdown', e => { if (e.target.id !== 'startGameBtn') { S.unlock(); west.skipTitle(); } });
   const q = new URLSearchParams(location.search).get('room');
   if (sess.get('duel.code') && sess.get('duel.token')) resume();
   else if (q) { $('#codeIn').value = q.toUpperCase().slice(0, 4); }

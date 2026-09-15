@@ -16,9 +16,9 @@ body[data-view="game"] #quitBtn, body[data-view="lobby"] #quitBtn, body[data-vie
 body[data-view="title"] #title, body[data-view="home"] #home, body[data-view="lobby"] #lobby, body[data-view="over"] #over { display: flex; }
 #home, #lobby, #over { align-items: flex-start; justify-content: flex-end; padding-left: max(16px, 4vw); }
 
-.logo { position: absolute; top: 14vh; left: 0; right: 0; margin: 0; text-align: center; color: #fff6e6; font: clamp(80px, 16vw, 200px)/1 "Black Han Sans", sans-serif; text-shadow: 0 6px 30px #000a; }
-.logo small { display: block; font: clamp(20px, 3vw, 36px)/1.6 "Rye", serif; letter-spacing: .3em; color: #f0c070; }
-#title { padding-bottom: 12vh; }
+#title { padding-bottom: 14vh; }
+#startGameBtn { opacity: 0; transition: opacity .6s; }
+.ready #startGameBtn { opacity: 1; }
 
 .poster { width: min(360px, 100%); display: grid; gap: 10px; padding: 22px; background: #eadcbf; border-radius: 4px; box-shadow: 0 0 0 1px #3c2310, 0 20px 60px #000a; }
 .poster h2 { margin: 0; font: 44px/1 "Black Han Sans", sans-serif; color: #8e2f22; }

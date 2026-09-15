@@ -4,7 +4,7 @@
 
 https://duel.41ways.workers.dev/
 
-- 시작 화면 → 방 만들기 → 들어온 사람은 지평선에서 걸어 나온다
+- 시작 화면(권총과 칼이 부딪혀 로고) → 방 만들기 → 들어온 사람은 지평선에서 걸어 나온다
 - 결투 시작: 회전초가 화면을 닦고 번개로 갈라진 선수 소개, 다시 회전초 → 결투장
 - 신호 전에 쏘면 오발. 0.1초보다 빠르면 부정출발
 - 총성 → 암전 → 무릎 꿇고 쓰러지는 장면 → 먼지 너머 승자와 이름
@@ -23,7 +23,8 @@ https://duel.41ways.workers.dev/
 
 ```
 python art/cut_lineup.py   # westernduelists.png → gun1~4 전신 · 가슴 위
-python art/cut_scene.py    # westernduel.png → 배경판 · 판초 뒷모습 · 회전초 · 시작 화면
+python art/cut_scene.py    # westernduel.png → 배경판 · 회전초 · 낮은 카메라 배경
+python art/cut_back.py     # westernduelistback.png → 앞사람 뒷모습 · 총 드는 팔, 멀리 선 사람 색 맞추기
 ```
 
 ## 개발

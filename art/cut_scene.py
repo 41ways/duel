@@ -65,7 +65,7 @@ fore = grab(
 flap = np.zeros((H, W), np.uint8)
 cv2.fillPoly(flap, [np.array([(452, 246), (522, 320), (574, 428), (592, 476), (566, 486), (470, 300)], np.int32)], 1)
 fore = np.clip(fore + flap, 0, 1).astype(np.uint8)
-fore_box = save_cut(fore, 'fore1.png')
+fore_box = None  # 앞사람은 이제 따로 받은 뒷모습(cut_back.py)을 쓴다
 
 # 회전초
 weed = grab((640, 430, 780, 560), iters=8, fg_poly=[(690, 470), (740, 470), (745, 525), (690, 525)])
@@ -75,29 +75,64 @@ save_cut(weed, 'weed.png', soft=0.8)
 far = np.zeros((H, W), np.uint8)
 cv2.fillPoly(far, [np.array([(920, 236), (992, 236), (996, 280), (1012, 300), (1014, 420), (1010, 524),
                              (888, 524), (896, 420), (898, 300), (916, 280)], np.int32)], 1)
-cv2.ellipse(far, (870, 513), (125, 13), 0, 0, 360, 1, -1)
+cv2.ellipse(far, (862, 515), (140, 17), 0, 0, 360, 1, -1)
 
 
-def patch(img, mask, dx, grow=15):
-    """mask 자리를 가로로 dx 떨어진 곳으로 덮는다. 가로로만 옮기니 지평선 높이가 맞는다.
-    판초 자리는 결투 장면에서 늘 앞사람이 가리므로 이음매를 크게 신경 쓰지 않는다."""
-    hole = cv2.dilate(mask.astype(np.uint8), np.ones((grow, grow), np.uint8)).astype(np.float32)
-    soft = np.clip(cv2.GaussianBlur(hole, (0, 0), 4) * 1.5, 0, 1)[..., None]
-    return (img * (1 - soft) + np.roll(img, -dx, axis=1) * soft).astype(np.uint8)
+def fill_rows(img, mask, dx, grow=9):
+    """가는 물체 지우기. 줄마다 구멍 양 끝 색을 이어 밑색을 깔고, dx 옆 조각의 결(고주파)만 얹는다.
+    밝기는 양옆에서 오니 띠가 생기지 않는다."""
+    m = cv2.dilate(mask.astype(np.uint8), np.ones((grow, grow), np.uint8))
+    f = img.astype(np.float32)
+    donor = np.roll(f, -dx, axis=1)
+    detail = donor - cv2.GaussianBlur(donor, (0, 0), 5)
+    smooth = cv2.GaussianBlur(f, (0, 0), 2)
+    out = f.copy()
+    for y in range(img.shape[0]):
+        xs = np.where(m[y])[0]
+        if not len(xs):
+            continue
+        # 한 줄에 구멍이 여러 조각일 수 있다
+        runs = np.split(xs, np.where(np.diff(xs) > 1)[0] + 1)
+        for r in runs:
+            x0, x1 = r[0] - 1, r[-1] + 1
+            if x0 < 3 or x1 > img.shape[1] - 4:
+                continue
+            L = smooth[y, x0 - 3:x0 + 1].mean(axis=0)
+            R = smooth[y, x1:x1 + 4].mean(axis=0)
+            t = ((np.arange(x0 + 1, x1) - x0) / (x1 - x0))[:, None]
+            out[y, x0 + 1:x1] = L * (1 - t) + R * t + detail[y, x0 + 1:x1]
+    # 줄 사이 튐 줄이기 — 구멍 안만 세로로 살짝
+    v = cv2.GaussianBlur(out, (1, 0), sigmaX=0.1, sigmaY=1.2)
+    mm = cv2.GaussianBlur(m.astype(np.float32), (0, 0), 1.5)[..., None]
+    out = out * (1 - mm * 0.5) + v * (mm * 0.5)
+    return np.clip(out, 0, 255).astype(np.uint8)
+
+
+def fill_left(img, mask, dx):
+    """화면 끝에 닿은 큰 자리(판초). 오른쪽에서 옮겨 오되, 줄마다 경계 밝기 차이를 빼서 이음매를 없앤다."""
+    m = cv2.dilate(mask.astype(np.uint8), np.ones((31, 31), np.uint8))
+    f = img.astype(np.float32)
+    donor = np.roll(f, -dx, axis=1)
+    diff = np.zeros((img.shape[0], 3), np.float32)
+    for y in range(img.shape[0]):
+        xs = np.where(m[y])[0]
+        if not len(xs):
+            continue
+        x1 = min(xs.max() + 1, img.shape[1] - 8)
+        diff[y] = f[y, x1:x1 + 8].mean(axis=0) - donor[y, x1:x1 + 8].mean(axis=0)
+    diff = cv2.GaussianBlur(diff[:, None, :], (0, 0), sigmaX=0.1, sigmaY=6)[:, 0, :]
+    fill = donor + diff[:, None, :]
+    soft = np.clip(cv2.GaussianBlur(m.astype(np.float32), (0, 0), 6) * 1.4, 0, 1)[..., None]
+    return np.clip(f * (1 - soft) + fill * soft, 0, 255).astype(np.uint8)
 
 
 plate = src.copy()
-shadow = np.zeros((H, W), np.uint8)
-cv2.ellipse(shadow, (870, 513), (125, 13), 0, 0, 360, 1, -1)
-plate = patch(plate, shadow, 300)
-body = far.copy()
-body[500:] = 0
-cv2.fillPoly(body, [np.array([(900, 470), (1010, 470), (1010, 520), (900, 520)], np.int32)], 1)
-plate = patch(plate, body, 125)
+man = far.copy()
+plate = fill_rows(plate, man, 330)
 m = weed.copy()
 cv2.ellipse(m, (700, 548), (75, 13), 0, 0, 360, 1, -1)
-plate = patch(plate, m, 270)
-plate = patch(plate, fore, 600, grow=31)
+plate = fill_rows(plate, m, 280)
+plate = fill_left(plate, fore, 600)
 hole = np.clip(fore + weed + far, 0, 1)
 
 cv2.imwrite(os.path.join(OUT, 'plate.jpg'), plate, [cv2.IMWRITE_JPEG_QUALITY, 88])
@@ -105,10 +140,8 @@ if DBG:
     dbg = src.copy()
     dbg[hole > 0] = (dbg[hole > 0] * 0.4 + np.array([0, 0, 255]) * 0.6).astype(np.uint8)
     cv2.imwrite(os.path.join(DBG, 'mask.jpg'), dbg)
-print('fore box', fore_box)
 
 # ── 시작 화면 · 쓰러지는 장면 배경 ──
-cv2.imwrite(os.path.join(OUT, 'title.jpg'), src, [cv2.IMWRITE_JPEG_QUALITY, 86])
 # 낮은 카메라: 오른쪽 하늘·메사 쪽을 크게, 초점 밖으로 흐리게, 역광으로 따뜻하게
 low = plate[0:420, 640:1400].astype(np.float32)
 low = cv2.resize(low, (1280, 708), interpolation=cv2.INTER_CUBIC)
