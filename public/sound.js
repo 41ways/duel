@@ -1,11 +1,31 @@
 /**
- * 결투 — 소리. 파일 없이 WebAudio 로 합성한다.
+ * 결투 — 소리. 총성 · 칼 휘두르기는 녹음 파일(sound/), 나머지는 WebAudio 로 합성한다.
  */
 (function (root) {
   'use strict';
   let ctx = null, master = null, noiseBuf = null, windNode = null;
   let muted = false;
   try { muted = localStorage.getItem('duel.mute') === '1'; } catch (_) {}
+
+  // 녹음 파일은 미리 받아 두고, 소리를 켤 수 있게 되면(첫 클릭) 푼다. 못 받으면 합성음으로
+  const FILES = {
+    shot: '/sound/shotsound.mp3', swing: '/sound/swing.mp3', swordout: '/sound/swordout.mp3', swordfight: '/sound/swordfight.mp3',
+    samuraiready: '/sound/samuraiready.mp3', samuraistart: '/sound/samuraistart.mp3',
+  };
+  let music = null;
+  const bufs = {}, raws = {};
+  for (const k in FILES) {
+    raws[k] = typeof fetch === 'function'
+      ? fetch(FILES[k]).then(r => (r.ok ? r.arrayBuffer() : null)).catch(() => null)
+      : Promise.resolve(null);
+  }
+  function loadFiles() {
+    for (const k in raws) {
+      raws[k].then(raw => raw && ctx.decodeAudioData(raw.slice(0)))
+        .then(buf => { if (buf) bufs[k] = buf; })
+        .catch(() => {});
+    }
+  }
 
   function ac() {
     if (!ctx) {
@@ -18,6 +38,7 @@
       noiseBuf = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
       const d = noiseBuf.getChannelData(0);
       for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+      loadFiles();
     }
     if (ctx.state === 'suspended') ctx.resume();
     return ctx;
@@ -57,11 +78,52 @@
     shot(far) {
       if (!ac()) return; const t = ctx.currentTime;
       const k = far ? 0.45 : 1;
+      if (bufs.shot) {
+        // 여러 발이 겹칠 때 똑같이 들리지 않게 음높이를 조금씩 흔들고, 뒤따르는 총성은 멀고 먹먹하게
+        const src = ctx.createBufferSource(); src.buffer = bufs.shot;
+        src.playbackRate.value = (far ? 0.9 : 1) * (0.96 + Math.random() * 0.08);
+        const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = far ? 2200 : 16000;
+        const g = ctx.createGain(); g.gain.value = 1.2 * k;
+        src.connect(f); f.connect(g); g.connect(master);
+        src.start(t, 0.05);   // 파일 앞 0.05초 빈 곳은 건너뛰어 화면 번쩍임과 맞춘다
+        return;
+      }
       noise(t, 0.6, 'lowpass', far ? 1800 : 4200, 0.7, 0.9 * k, far ? 0.5 : 0.35);
       tone(t, 'sine', 140, 45, 0.8 * k, 0.003, 0.25);
       // 협곡 메아리
       noise(t + 0.22, 0.6, 'lowpass', 900, 0.5, 0.18 * k, 0.5);
       noise(t + 0.48, 0.6, 'lowpass', 700, 0.5, 0.08 * k, 0.5);
+    },
+    /** 녹음 파일 한 번 — 없으면 fallback(합성음) */
+    play(name, gain = 1, fallback) {
+      if (!ac()) return null;
+      if (!bufs[name]) { if (fallback) fallback(); return null; }
+      const src = ctx.createBufferSource(); src.buffer = bufs[name];
+      const g = ctx.createGain(); g.gain.value = gain;
+      src.connect(g); g.connect(master);
+      src.start(ctx.currentTime);
+      return { src, g };
+    },
+    /** 깔리는 노래 — 새로 틀면 앞의 것은 끈다 */
+    music(name, gain = 0.9) {
+      S.stopMusic(0.15);
+      music = S.play(name, gain);
+    },
+    stopMusic(fade = 0.4) {
+      if (!music || !ctx) return;
+      const m = music; music = null;
+      m.g.gain.setTargetAtTime(0.0001, ctx.currentTime, fade / 3);
+      setTimeout(() => { try { m.src.stop(); } catch (_) {} }, fade * 1000 + 100);
+    },
+    // 칼 휘두르기 — 녹음 파일, 없으면 합성한 베기 소리
+    swing() {
+      if (!ac()) return;
+      if (!bufs.swing) return S.slash();
+      const src = ctx.createBufferSource(); src.buffer = bufs.swing;
+      src.playbackRate.value = 0.97 + Math.random() * 0.06;
+      const g = ctx.createGain(); g.gain.value = 1.3;
+      src.connect(g); g.connect(master);
+      src.start(ctx.currentTime);
     },
     click() { if (!ac()) return; const t = ctx.currentTime; noise(t, 0.05, 'highpass', 2500, 1, 0.3, 0.03); tone(t, 'square', 900, 600, 0.05, 0.001, 0.03); },
     misfire() {

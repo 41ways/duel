@@ -77,7 +77,7 @@
       names.forEach((n, i) => { this.img[n.replace(/\.\w+$/, '')] = imgs[i]; });
       this.sil = CHARS.map((c, i) => this.silhouette(this.img[c.key], i));
       this.puff = this.makePuff();
-      try { await Promise.all([document.fonts.load(`900 40px ${FONT_T}`), document.fonts.load(`40px ${FONT_W}`), document.fonts.load(`40px ${FONT_H}`), document.fonts.load(`40px ${FONT_JP}`, '一騎討準備中'), document.fonts.load('40px Rye'), document.fonts.load('40px "Song Myung"', '결투'), document.fonts.load('40px "Nanum Brush Script"')]); } catch (_) {}
+      try { await Promise.all([document.fonts.load(`900 40px ${FONT_T}`), document.fonts.load(`40px ${FONT_W}`), document.fonts.load(`40px ${FONT_H}`), document.fonts.load(`40px ${FONT_JP}`, '一騎討準備中対斬勝負浪人剣客武士刺速守剛空席主早止無引分真果たし状談話あり'), document.fonts.load('900 40px "Noto Serif JP"', '一騎討対斬勝負浪人剣客武士刺速守剛空席主真'), document.fonts.load('40px "Yuji Syuku"', '一騎討対斬勝負速守剛空席果たし状談話あり'), document.fonts.load('40px Rye'), document.fonts.load('40px "Song Myung"', '결투'), document.fonts.load('40px "Nanum Brush Script"')]); } catch (_) {}
     }
 
     /** 판초가 아닌 사람이 앞에 설 때 — 역광에 뭉개진 어깨 너머 실루엣 */
@@ -416,7 +416,9 @@
           }
         });
       }
-      once('sl', SL, () => { this.S && this.S.slash(); this.shakeIt(240, 7); });
+      // 칼 휘두르는 녹음은 0.2초쯤에 가장 세다 — 그만큼 먼저 틀어 칼빛과 맞춘다
+      once('slsnd', SL - 190, () => { this.S && this.S.swing(); });
+      once('sl', SL, () => { this.shakeIt(240, 7); });
       once('cl', CL, () => {
         this.S && this.S.thud(0.5); this.S && this.S.clink();
         this.shakeIt(320, 11);
@@ -676,7 +678,8 @@
       else if (ha < 520) snip = -0.05 * Math.exp(-(ha - 160) / 90) * Math.cos((ha - 160) / 40);
       if (ha >= 155 && !h.hit) {
         h.hit = true;
-        this.S && this.S.clink();
+        // 칼끼리 맞부딪히는 녹음(없으면 합성한 칼 부딪힘)
+        if (this.S) this.S.play('swordfight', 0.7, () => this.S.clash());
         for (let i = 0; i < 18; i++) {
           const an = Math.random() * TAU;
           const sp = (0.3 + Math.random()) * fs * 1.4;
@@ -805,6 +808,20 @@
       this.startWipe('select');
     }
 
+    /** 고르기 화면 가장자리 빛 — 사무라이 쪽 달빛 색은 필터를 매 프레임 걸면 끊겨서 한 번만 구워 둔다 */
+    selRim(side) {
+      this._selRim = this._selRim || {};
+      if (this._selRim[side]) return this._selRim[side];
+      const rim = this.backlit(side === 'west' ? 'mode_west_man' : 'mode_samurai_man');
+      if (!rim) return null;
+      if (side === 'west') return (this._selRim[side] = rim.rim);
+      const c = document.createElement('canvas'); c.width = rim.rim.width; c.height = rim.rim.height;
+      const g = c.getContext('2d');
+      try { g.filter = 'hue-rotate(180deg) saturate(0.4) brightness(1.4)'; } catch (_) {}
+      g.drawImage(rim.rim, 0, 0);
+      return (this._selRim[side] = c);
+    }
+
     selectSide(x) { const s = this.sel; return x < (s ? s.split : 0.5) * this.W ? 'west' : 'samurai'; }
 
     selectHover(x) {
@@ -821,7 +838,8 @@
       if (!s || s.pick || this.view !== 'select') return;
       s.pick = this.selectSide(x);
       s.pickAt = now(); s.from = s.split;
-      this.S && this.S.whoosh(0.7);
+      // 서부는 총성, 사무라이는 칼 휘두르는 소리
+      if (this.S) { if (s.pick === 'west') this.S.shot(false); else this.S.swing(); }
       this.later(() => done(s.pick), 850);
     }
 
@@ -836,10 +854,21 @@
       const s = this.sel;
       if (!s) return;
       const dt = Math.min(0.05, (t - (s.last || t)) / 1000); s.last = t;
+      // 프레임 빠르기와 상관없이 같은 느낌으로 따라가게 — 한 번에 튀지 않고 스르르
+      const ease = rate => 1 - Math.exp(-dt * rate);
       if (s.pick) s.split = lerp(s.from, s.pick === 'west' ? 1.2 : -0.2, easeIO((t - s.pickAt) / 800));
       else {
         const target = s.hover === 'west' ? 0.6 : s.hover === 'samurai' ? 0.4 : 0.5;
-        s.split += (target - s.split) * Math.min(1, dt * 7);
+        s.split += (target - s.split) * ease(4.5);
+      }
+      // 어두움 · 다가옴도 쪽마다 따로 부드럽게 옮겨 간다(바로 바꾸면 뚝 끊겨 보인다)
+      s.dim = s.dim || { west: 0.22, samurai: 0.22 };
+      s.near = s.near || { west: 0, samurai: 0 };
+      for (const side of ['west', 'samurai']) {
+        const on = s.pick ? s.pick === side : s.hover === side;
+        const dimTo = s.pick ? (on ? 0 : 0.8) : s.hover ? (on ? 0 : 0.62) : 0.22;
+        s.dim[side] += (dimTo - s.dim[side]) * ease(5);
+        s.near[side] += ((on ? 1 : 0) - s.near[side]) * ease(4);
       }
       const intro = easeOut((t - s.at) / 700);
       const slant = W * 0.05;
@@ -851,33 +880,30 @@
       ctx.fillStyle = '#050302'; ctx.fillRect(0, 0, W, H);
       for (const p of panels) {
         if (!p.bg) continue;
-        const on = s.pick ? s.pick === p.side : s.hover === p.side;
-        const dim = s.pick ? (on ? 0 : 0.8) : s.hover ? (on ? 0 : 0.62) : 0.22;
-        p.dimNow = p.dimNow == null ? dim : p.dimNow;
+        const dim = s.dim[p.side], near = s.near[p.side];
         ctx.save();
         ctx.translate(p.off, 0);
         ctx.beginPath(); p.poly.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.closePath();
         ctx.clip();
         // 배경 — 패널 가운데로 조금 끌어온다
-        const bs = Math.max(W / p.bg.width, H / p.bg.height) * (on ? 1.06 : 1.02);
+        const bs = Math.max(W / p.bg.width, H / p.bg.height) * lerp(1.02, 1.06, near);
         const bw = p.bg.width * bs, bh = p.bg.height * bs;
         ctx.drawImage(p.bg, (W - bw) / 2 + (p.cxp - W / 2) * 0.5, (H - bh) / 2, bw, bh);
         // 사람
         if (p.man) {
-          const mh = H * (on ? 0.9 : 0.86);
+          const mh = H * lerp(0.86, 0.9, near);
           const mw = p.man.width * mh / p.man.height;
           const shadow = ctx.createRadialGradient(p.cxp, H * 0.97, 0, p.cxp, H * 0.97, mw * 0.6);
           shadow.addColorStop(0, 'rgba(0,0,0,.55)'); shadow.addColorStop(1, 'rgba(0,0,0,0)');
           ctx.fillStyle = shadow; ctx.fillRect(p.cxp - mw, H * 0.9, mw * 2, H * 0.12);
           const mx = p.cxp - mw / 2, my = H * 0.99 - mh;
           // 배경 빛을 받은 가장자리 — 서부는 오른쪽 위 햇빛, 사무라이는 왼쪽 위 달빛
-          const rim = this.backlit(p.side === 'west' ? 'mode_west_man' : 'mode_samurai_man');
+          const rim = this.selRim(p.side);
           if (rim) {
             ctx.save();
             ctx.globalAlpha = 0.28;
             const rs = p.side === 'west' ? 1 : -1;
-            ctx.filter = p.side === 'west' ? 'none' : 'hue-rotate(180deg) saturate(0.4) brightness(1.4)';
-            ctx.drawImage(rim.rim, mx + rs * mh * 0.004, my - mh * 0.003, mw, mh);
+            ctx.drawImage(rim, mx + rs * mh * 0.004, my - mh * 0.003, mw, mh);
             ctx.restore();
           }
           ctx.drawImage(p.man, mx, my, mw, mh);
@@ -928,21 +954,21 @@
         if (p.side === 'west') {
           ctx.font = `${fsz * 0.24}px ${FONT_W}`;
           ctx.fillStyle = 'rgba(255,236,200,.9)';
-          ctx.fillText('★  DEAD OR ALIVE  ★   총잡이 1–4인', lx, H * 0.84 + fsz * 0.45);
+          ctx.fillText('★  DEAD OR ALIVE  ★   죽느냐 사느냐 1–4인', lx, H * 0.84 + fsz * 0.45);
         } else {
           ctx.font = `${fsz * 0.42}px "Nanum Brush Script", cursive`;
           ctx.fillStyle = 'rgba(240,244,255,.92)';
-          ctx.fillText('사무라이 일대일 · 준비 중', lx, H * 0.84 + fsz * 0.55);
+          ctx.fillText('사무라이 일기토 1VS1', lx, H * 0.84 + fsz * 0.55);
           // 붉은 낙관
           const sz = fsz * 0.55;
-          const tx = lx - ctx.measureText('사무라이 일대일 · 준비 중').width - sz * 1.2;
+          const tx = lx - ctx.measureText('사무라이 일기토 1VS1').width - sz * 1.2;
           ctx.save();
           ctx.translate(tx, H * 0.84 + fsz * 0.2); ctx.rotate(-0.06);
           ctx.fillStyle = 'rgba(179,38,30,.92)';
           ctx.fillRect(-sz / 2, -sz / 2, sz, sz);
           ctx.fillStyle = '#f5e6d8'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
           ctx.font = `${sz * 0.4}px ${FONT_JP}`;
-          ctx.fillText('準備', 0, -sz * 0.18); ctx.fillText('中', 0, sz * 0.24);
+          ctx.fillText('真剣', 0, -sz * 0.18); ctx.fillText('勝負', 0, sz * 0.24);
           ctx.restore();
         }
         ctx.restore();
@@ -2021,17 +2047,19 @@
       this.drawHaze(t);
       const bh = H * 0.09;
       ctx.fillStyle = '#080605'; ctx.fillRect(0, 0, W, bh); ctx.fillRect(0, H - bh, W, bh);
-      // 결과판이 뜨면 이름표는 비켜 준다
-      if (win && t > m.res.nameAt && !(m.overAt && t - m.overAt > 1100)) this.drawNameCard(win, t - m.res.nameAt, m.res.ms);
+      // 결과판이 뜨면 이름표는 왼쪽으로 스르르 흐려지며 비켜 준다
+      const gone = m.overAt ? easeIO((t - m.overAt - 150) / 750) : 0;
+      if (win && t > m.res.nameAt && gone < 1) this.drawNameCard(win, t - m.res.nameAt, m.res.ms, 1 - gone);
     }
 
     /** 콜 오브 듀티 1등 분대처럼 — 금빛 선이 그어지고 이름이 옆에서 밀려 나온다 */
-    drawNameCard(p, a, ms) {
+    drawNameCard(p, a, ms, vis = 1) {
       const { ctx, W, H } = this;
       const ch = CHARS[p.char % 4];
-      const x = W * 0.07, y = H * 0.7;
+      const x = W * 0.07 - (1 - vis) * W * 0.04, y = H * 0.7;
       const fs = Math.min(H * 0.11, W * 0.09);
       ctx.save();
+      ctx.globalAlpha = vis;
       // 사막 위에서도 읽히게 — 왼쪽 아래를 어둡게 덮는다
       const band = easeOut(a / 400);
       const bg = ctx.createLinearGradient(0, 0, W * 0.62, 0);
@@ -2044,7 +2072,7 @@
       ctx.fillRect(x, y + fs * 0.35, W * 0.42 * line, Math.max(2, fs * 0.04));
       // 윗줄
       const e1 = easeOut((a - 120) / 380);
-      ctx.globalAlpha = e1;
+      ctx.globalAlpha = vis * e1;
       ctx.font = `${fs * 0.3}px ${FONT_W}`;
       ctx.fillStyle = '#e8b85a';
       ctx.textBaseline = 'alphabetic';
@@ -2054,7 +2082,7 @@
       ctx.fillText(`${ch.ko} · ${ch.en}`, x + fs * 1.95 + (1 - e1) * -40, y - fs * 1.02);
       // 이름 — 비스듬히 잘려 나오며
       const e2 = easeOut((a - 260) / 450);
-      ctx.globalAlpha = 1;
+      ctx.globalAlpha = vis;
       ctx.save();
       ctx.beginPath(); ctx.rect(x - 10, y - fs * 1.0, W, fs * 1.35); ctx.clip();
       ctx.translate(x + (1 - e2) * -W * 0.5, y);
@@ -2068,7 +2096,7 @@
       ctx.restore();
       // 아랫줄
       const e3 = easeOut((a - 600) / 400);
-      ctx.globalAlpha = e3;
+      ctx.globalAlpha = vis * e3;
       ctx.font = `800 ${fs * 0.3}px "Pretendard Variable", system-ui`;
       ctx.fillStyle = '#fff';
       const msText = ms != null ? `${(ms / 1000).toFixed(3)}초` : '';

@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Rye&family=Hahmlet:wght@700;900&family=Nanum+Pen+Script&family=Nanum+Brush+Script&family=Song+Myung&display=swap">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@900&family=Yuji+Syuku&text=%E4%B8%80%E9%A8%8E%E8%A8%8E%E6%BA%96%E5%82%99%E4%B8%AD&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@900&family=Yuji+Syuku&text=%E4%B8%80%E9%A8%8E%E8%A8%8E%E6%BA%96%E5%82%99%E4%B8%AD%E5%AF%BE%E6%96%AC%E5%8B%9D%E8%B2%A0%E6%B5%AA%E4%BA%BA%E5%89%A3%E5%AE%A2%E6%AD%A6%E5%A3%AB%E5%88%BA%E9%80%9F%E5%AE%88%E5%89%9B%E7%A9%BA%E5%B8%AD%E4%B8%BB%E6%97%A9%E6%AD%A2%E7%84%A1%E5%BC%95%E5%88%86%E7%9C%9F%E6%9E%9C%E3%81%9F%E3%81%97%E7%8A%B6%E8%AB%87%E8%A9%B1%E3%81%82%E3%82%8A%E5%BE%85%E6%88%A6%E5%90%8D%E6%88%BF%E7%95%AA%E8%99%9F&display=swap">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <link rel="stylesheet" href="/style.css">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚔️</text></svg>">
@@ -34,59 +34,58 @@
 
 <!-- 처음 — 왼쪽 마을 게시판에 열린 방, 오른쪽 수배서는 사진 칸이 뚫려 뒤에 선 사람 얼굴이 비친다 -->
 <section id="home" class="view">
-  <button class="back" id="backSelect">☜ 방식 다시 고르기</button>
+  <button class="back" id="backSelect">← 뒤로가기</button>
   <div class="townboard">
     <div class="tb-in">
       <p class="tb-head">열린 방 <small id="online"></small></p>
       <ul id="roomList"></ul>
-      <p class="rb-empty" id="roomEmpty">아직 열린 방이 없어요. 오른쪽에서 방을 만들어 보세요.</p>
+      <p class="rb-empty" id="roomEmpty">아직 열린 방이 없어요. <span class="w-only">오른쪽</span><span class="s-only">왼쪽</span>에서 방을 만들어 보세요.</p>
     </div>
   </div>
   <div class="sheet holed">
     <div class="hole" id="faceHole"></div>
-    <p class="doa">DEAD OR ALIVE</p>
-    <label class="field"><span>NAME</span><input id="nameIn" maxlength="10" placeholder="이름을 적으세요" autocomplete="off"></label>
+    <span class="kj-rod kj-top s-only" aria-hidden="true"></span>
+    <span class="kj-rod kj-bottom s-only" aria-hidden="true"></span>
+    <p class="doa"><span class="w-only">DEAD OR ALIVE</span><span class="s-only">果たし状</span></p>
+    <p class="doa-sub s-only">일기토를 청하는 글</p>
+    <label class="field"><span><i class="w-only">NAME</i><i class="s-only">名</i></span><input id="nameIn" maxlength="10" placeholder="이름을 적으세요" autocomplete="off"></label>
     <button class="btn primary" id="createBtn">방 만들기</button>
     <div class="joinrow">
-      <label class="field"><span>No.</span><input id="codeIn" maxlength="4" placeholder="방 코드" autocomplete="off" autocapitalize="characters"></label>
+      <label class="field"><span><i class="w-only">No.</i><i class="s-only">房 番號</i></span><input id="codeIn" maxlength="4" placeholder="방 코드" autocomplete="off" autocapitalize="characters"></label>
       <button class="btn" id="joinBtn">들어가기</button>
     </div>
     <p class="err" id="homeErr"></p>
   </div>
 </section>
 
-<!-- 일기토 — 아직 준비 중. 수묵 느낌 미리보기 -->
-<section id="soon" class="view ink">
-  <div class="scroll">
-    <h2 class="brush">一騎討</h2>
-    <p class="vert">칼을 가는 중</p>
-    <p class="brush-sub">사무라이 일대일 결투는 곧 열립니다</p>
-    <span class="seal">準備中</span>
-    <button class="btn inkbtn" id="soonBack">돌아가기</button>
-  </div>
-</section>
-
 <!-- 대기실 — 왼쪽 방 설정 · 오른쪽 위 사람들(수배서 벽은 캔버스가 #wall 자리에 그린다) · 그 아래 채팅 -->
 <section id="lobby" class="view">
   <aside class="rules">
-    <p class="rules-kicker">ROOM No.</p>
+    <span class="kj-rod kj-top s-only" aria-hidden="true"></span>
+    <span class="kj-rod kj-bottom s-only" aria-hidden="true"></span>
+    <p class="rules-kicker"><span class="w-only">ROOM No.</span><span class="s-only">一騎討 · 방 번호</span></p>
     <b class="code" id="roomCode">----</b>
     <button class="btn slim" id="copyBtn">초대 링크 복사</button>
     <div class="rules-list" id="hostOpts">
       <label><span>판 수</span><select data-cfg="target"><option value="1">단판</option><option value="3">3선승</option><option value="5">5선승</option></select></label>
-      <label><span>신호</span><select data-cfg="signal"><option value="mix">화면에 "지금!"</option><option value="sound">소리만</option></select></label>
-      <label><span>거짓 신호</span><select data-cfg="decoys"><option value="true">포함</option><option value="false">없음</option></select></label>
+      <label class="w-only"><span>신호</span><select data-cfg="signal"><option value="mix">화면에 "지금!"</option><option value="sound">소리만</option></select></label>
+      <label class="w-only"><span>거짓 신호</span><select data-cfg="decoys"><option value="true">포함</option><option value="false">없음</option></select></label>
     </div>
     <div class="together">
       <button class="btn" id="addLocalBtn">+ 이 기기에서 같이 하기</button>
       <button class="help" id="helpBtn" aria-label="도움말" aria-expanded="false">?</button>
       <div class="helpbox" id="helpBox" hidden>
         <p class="hb-title">한 기기에서 같이 할 때 키</p>
-        <ul class="keys-note">
+        <ul class="keys-note w-only">
           <li><span>둘이</span><kbd>SPACE</kbd><kbd>ENTER</kbd></li>
           <li><span>셋이</span><kbd>A</kbd><kbd>SPACE</kbd><kbd>ENTER</kbd></li>
           <li><span>넷이</span><kbd>A</kbd><kbd>SPACE</kbd><kbd>ENTER</kbd><kbd>좌클릭</kbd></li>
         </ul>
+        <ul class="keys-note wide s-only">
+          <li><span>왼쪽</span><kbd>A</kbd>속공 <kbd>W</kbd>강공 <kbd>D</kbd>방어</li>
+          <li><span>오른쪽</span><kbd>J</kbd>속공 <kbd>I</kbd>강공 <kbd>L</kbd>방어</li>
+        </ul>
+        <p class="hb-note s-only">자세를 잡고 나면 5초 안에 기술 하나. 속공은 강공을, 강공은 방어를, 방어는 속공을 이겨요. 같은 기술이면 비기고, 못 고르면 멈춰 서요.</p>
         <p class="hb-note">빈 자리를 누르면 봇을 앉히고, 다른 사람 수배서를 누르면 방장을 넘기거나 내보낼 수 있어요.</p>
       </div>
     </div>
@@ -99,7 +98,7 @@
   </aside>
   <div id="wall"></div>
   <div class="chat" id="chat">
-    <p class="chat-kicker">SALOON TALK</p>
+    <p class="chat-kicker"><span class="w-only">SALOON TALK</span><span class="s-only">談話</span></p>
     <ol id="chatLog"></ol>
     <form id="chatForm" autocomplete="off"><input id="chatIn" maxlength="120" placeholder="한마디 적기"><button class="btn slim">보내기</button></form>
   </div>
@@ -109,7 +108,7 @@
 <!-- 끝 — 승자 장면 위에 결과판 -->
 <section id="over" class="view">
   <div class="result">
-    <p class="kicker" id="overKicker">RESULT</p>
+    <p class="kicker" id="overKicker"><span class="w-only">RESULT</span><span class="s-only">勝負あり</span></p>
     <h2 id="overTitle"></h2>
     <ol class="ranks" id="overList"></ol>
     <div class="acts">
@@ -121,11 +120,25 @@
   </div>
 </section>
 
+<!-- 사무라이 결투 — Y자로 기술 세 개: 왼쪽 속공 · 위 강공 · 오른쪽 방어. 혼자면 누르거나 A W D(화살표), 둘이면 키만 -->
+<div id="moves" aria-label="기술">
+  <button class="mv mv-heavy" data-move="heavy"><span class="mv-in"><i>剛</i><b>강공</b><kbd data-k="heavy">W</kbd></span></button>
+  <button class="mv mv-light" data-move="light"><span class="mv-in"><i>速</i><b>속공</b><kbd data-k="light">A</kbd></span></button>
+  <button class="mv mv-guard" data-move="guard"><span class="mv-in"><i>守</i><b>방어</b><kbd data-k="guard">D</kbd></span></button>
+  <!-- 화면을 가르는 Y자 — 가운데(50%, 50%)에서 왼쪽 위 · 오른쪽 위 모서리와 아래 가운데로 -->
+  <svg class="mv-lines" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+    <line x1="50" y1="50" x2="0" y2="0"/><line x1="50" y1="50" x2="100" y2="0"/><line x1="50" y1="50" x2="50" y2="100"/>
+  </svg>
+  <span class="mv-timer" aria-hidden="true"></span>
+  <p class="mv-rule">剛 ▶ 守 ▶ 速 ▶ 剛</p>
+</div>
+
 <div id="toast"></div>
 
 <script src="/duel.js"></script>
 <script src="/sound.js"></script>
 <script src="/west.js"></script>
+<script src="/samurai.js"></script>
 <script src="/app.js"></script>
 </body>
 </html>

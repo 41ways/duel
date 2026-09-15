@@ -56,8 +56,9 @@ check('사무라이 상성', () => {
   assert.deepStrictEqual(D.resolveSamurai([row(1, 'ok', 200, 'light'), row(2, 'ok', 400, 'guard')]).win, [2]);
   assert.deepStrictEqual(D.resolveSamurai([row(1, 'ok', 400, 'heavy'), row(2, 'ok', 200, 'guard')]).win, [1]);
 });
-check('사무라이 — 같은 기술은 빠른 쪽, 둘 다 방어는 무승부', () => {
-  assert.deepStrictEqual(D.resolveSamurai([row(1, 'ok', 300, 'heavy'), row(2, 'ok', 250, 'heavy')]).win, [2]);
+check('사무라이 — 같은 기술은 빠르기와 상관없이 무승부', () => {
+  assert.deepStrictEqual(D.resolveSamurai([row(1, 'ok', 300, 'heavy'), row(2, 'ok', 250, 'heavy')]).win, []);
+  assert.deepStrictEqual(D.resolveSamurai([row(1, 'ok', 300, 'light'), row(2, 'ok', 900, 'light')]).why, 'clash');
   assert.deepStrictEqual(D.resolveSamurai([row(1, 'ok', 300, 'guard'), row(2, 'ok', 250, 'guard')]).win, []);
 });
 check('사무라이 — 먼저 움직이면 짐, 가만있으면 공격에 맞음', () => {
@@ -110,11 +111,27 @@ check('서바이벌 — 봇끼리 끝까지 간다', () => {
   assert.strictEqual(g.d.alive.size, 1);
 });
 
-check('사무라이 — 먼저 움직이면 그 자리에서 판정', () => {
+check('사무라이 — 자세 잡는 동안 누른 건 무시, 고르기가 열리면 둘 다 고른 순간 판정', () => {
   const g = game({ mode: 'samurai' }, [{ id: 1 }, { id: 2 }]);
   g.d.start();
   g.c.run(D.T.first + D.T.introFirst.samurai + 10);
-  g.d.input(1, { r: 1, move: 'light' });
+  assert.strictEqual(g.d.phase, 'wait');
+  assert.ok(!g.d.input(1, { r: 1, move: 'light' }), '자세 중엔 안 받는다');
+  assert.ok(!g.last('result'));
+  g.c.run(g.c.now + D.T.stance + 10);
+  assert.strictEqual(g.d.phase, 'signal');
+  assert.ok(g.d.input(1, { r: 1, ms: 1200, move: 'light' }));
+  assert.ok(!g.last('result'), '한 명만 골랐다');
+  g.d.input(2, { r: 1, ms: 3000, move: 'heavy' });
+  assert.deepStrictEqual(g.last('result').win, [1]);
+});
+
+check('사무라이 — 5초 안에 안 고르면 멈춤', () => {
+  const g = game({ mode: 'samurai' }, [{ id: 1 }, { id: 2 }]);
+  g.d.start();
+  g.c.run(D.T.first + D.T.introFirst.samurai + D.T.stance + 20);
+  g.d.input(2, { r: 1, ms: 800, move: 'heavy' });
+  g.c.run(g.c.now + D.LIMIT.samurai + D.SLACK + 10);
   assert.deepStrictEqual(g.last('result').win, [2]);
 });
 

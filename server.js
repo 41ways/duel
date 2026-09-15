@@ -19,6 +19,10 @@ const MIME = {
   '.css': 'text/css; charset=utf-8',
   '.svg': 'image/svg+xml',
   '.png': 'image/png',
+  '.mp3': 'audio/mpeg',
+  '.webp': 'image/webp',
+  '.jpg': 'image/jpeg',
+  '.mp4': 'video/mp4',
   '.ico': 'image/x-icon',
   '.webmanifest': 'application/manifest+json',
 };
@@ -39,7 +43,18 @@ const server = http.createServer((req, res) => {
 
   fs.readFile(full, (err, buf) => {
     if (err) { res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' }).end('없는 페이지입니다'); return; }
-    res.writeHead(200, { 'content-type': MIME[path.extname(full)] || 'application/octet-stream', 'cache-control': 'no-cache' });
+    const type = MIME[path.extname(full)] || 'application/octet-stream';
+    // 영상은 앞으로 되감아 다시 틀 수 있게 일부분 요청(Range)에 답한다
+    const range = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range || '');
+    if (range) {
+      const start = range[1] ? +range[1] : buf.length - +range[2];
+      const end = range[1] && range[2] ? Math.min(+range[2], buf.length - 1) : buf.length - 1;
+      if (start >= buf.length || start > end) { res.writeHead(416, { 'content-range': `bytes */${buf.length}` }).end(); return; }
+      res.writeHead(206, { 'content-type': type, 'content-range': `bytes ${start}-${end}/${buf.length}`, 'accept-ranges': 'bytes', 'content-length': end - start + 1, 'cache-control': 'no-cache' });
+      res.end(buf.subarray(start, end + 1));
+      return;
+    }
+    res.writeHead(200, { 'content-type': type, 'accept-ranges': 'bytes', 'cache-control': 'no-cache' });
     res.end(buf);
   });
 });

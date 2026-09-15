@@ -11,7 +11,7 @@
  *   result → 판정
  *
  * 서부: 가장 빠른 사람이 1점(먼저 N점) 또는 서바이벌(오발·꼴찌 탈락, 마지막 1명)
- * 사무라이(1:1): 약공격 > 강공격 > 방어 > 약공격. 같은 기술이면 빠른 쪽. 먼저 N점.
+ * 사무라이(1:1): 속공 > 강공 > 방어 > 속공. 같은 기술이면 빠른 쪽. 먼저 N점.
  */
 (function (root) {
   'use strict';
@@ -22,22 +22,23 @@
   const SIGNALS = ['mix', 'screen', 'sound'];
   const LEVELS = ['easy', 'normal', 'hard'];
   const MOVES = ['light', 'guard', 'heavy'];
-  const MOVE_NAME = { light: '약공격', guard: '방어', heavy: '강공격' };
+  const MOVE_NAME = { light: '속공', guard: '방어', heavy: '강공' };
   const BEATS = { light: 'heavy', heavy: 'guard', guard: 'light' };
   const MAX_PLAYERS = { west: 4, samurai: 2 };
 
   const MIN_MS = 100;                         // 이보다 빠르면 보고 누른 게 아니다 — 부정출발
-  const LIMIT = { west: 1500, samurai: 1000 };
+  const LIMIT = { west: 1500, samurai: 5000 };   // 사무라이는 고르는 시간
   const SLACK = 800;                          // 신호가 늦게 닿는 사람을 기다려 주는 여유
 
   const T = {
     first: 400,
-    introFirst: { west: 5600, samurai: 2600 },   // 회전초 전환 → 선수 소개 → 회전초 전환 → 결투장
-    intro: { west: 2000, samurai: 2600 },
+    introFirst: { west: 5600, samurai: 5200 },   // 회전초(벚꽃) 전환 → 선수 소개 → 전환 → 결투장
+    intro: { west: 2000, samurai: 2000 },
     waitMin: 2200, waitMax: 6500,
+    stance: 2600,                                // 사무라이 — 발도술 자세를 잡고 어두워진 뒤 고르기가 열린다
     decoyGap: 900,                            // 가짜 신호와 진짜 신호 사이 최소 간격
-    result: { west: 7800, samurai: 3800 },       // 총성 → 암전 → 무릎 · 쓰러짐 → 먼지 너머 승자 · 이름
-    resultNone: 3200,                            // 아무도 못 맞혔을 때
+    result: { west: 7800, samurai: 10600 },   // 사무라이 — 시작 소리 → 교차 · 마주 봄 · 무릎 · 할복검 · 쓰러짐 → 등 뒤 컷 · 승자       // 총성 → 암전 → 무릎 · 쓰러짐 → 먼지 너머 승자 · 이름 / 시작 소리 → 스쳐 벰 → 무릎 · 쓰러짐 → 勝
+    resultNone: { west: 3200, samurai: 7600 },   // 아무도 못 맞혔을 때 / 비겼을 때(엇갈림 → 불똥 → 引分을 충분히 보여 준다)
   };
 
   const SIG_KINDS = {
@@ -66,7 +67,7 @@
     return {
       mode,
       rule: mode === 'samurai' ? 'points' : (RULES.includes(c.rule) ? c.rule : 'points'),
-      target: TARGETS.includes(c.target) ? c.target : (mode === 'samurai' ? 3 : 1),
+      target: TARGETS.includes(c.target) ? c.target : 1,   // 기본은 단판
       signal: SIGNALS.includes(c.signal) ? c.signal : 'mix',
       decoys: c.decoys !== false,               // 거짓 신호(회전초 · 까마귀 · "지금?")를 섞을지
     };
@@ -76,7 +77,7 @@
   function classify(inp, mode) {
     if (!inp) return { st: 'late', ms: null, move: null };
     if (inp.early) return { st: 'early', ms: null, move: null };
-    if (inp.ms < MIN_MS) return { st: 'jump', ms: inp.ms, move: inp.move || null };
+    if (mode !== 'samurai' && inp.ms < MIN_MS) return { st: 'jump', ms: inp.ms, move: inp.move || null };
     if (inp.ms > LIMIT[mode]) return { st: 'late', ms: inp.ms, move: inp.move || null };
     return { st: 'ok', ms: inp.ms, move: inp.move || null };
   }
@@ -115,11 +116,8 @@
       const m = act(a) ? a : b;
       return m.move === 'guard' ? { win: [], out: [], why: 'guardIdle' } : { win: [m.id], out: [], why: 'openHit' };
     }
-    if (a.move === b.move) {
-      if (a.move === 'guard') return { win: [], out: [], why: 'bothGuard' };
-      if (a.ms === b.ms) return { win: [], out: [], why: 'clash' };
-      return { win: [(a.ms < b.ms ? a : b).id], out: [], why: 'faster' };
-    }
+    // 같은 기술이면 칼끼리 맞부딪혀 비긴다
+    if (a.move === b.move) return { win: [], out: [], why: a.move === 'guard' ? 'bothGuard' : 'clash' };
     const w = BEATS[a.move] === b.move ? a : b;
     return { win: [w.id], out: [], why: w.move };
   }
@@ -180,6 +178,8 @@
       this.phase = 'wait';
       const r = this.r;
       this.emit({ k: 'wait', r });
+      // 사무라이 — 가짜 신호 없이, 자세를 잡는 시간이 지나면 바로 고르기
+      if (this.cfg.mode === 'samurai') return this.later(() => this.fire(), T.stance);
       const total = this.between(T.waitMin, T.waitMax);
       const x = this.rand();
       const n = !this.cfg.decoys ? 0 : x < 0.3 ? 0 : x < 0.75 ? 1 : 2;
@@ -215,7 +215,7 @@
       this.emit({ k: 'signal', r, kind: this.sig });
       for (const p of this.players) {
         if (!p.bot || !this.alive.has(p.id) || this.inputs.has(p.id)) continue;
-        const ms = Math.round(this.between(...BOT[p.level].ms));
+        const ms = Math.round(this.cfg.mode === 'samurai' ? this.between(700, 2800) : this.between(...BOT[p.level].ms));
         const move = this.pick(MOVES);
         this.later(() => { if (this.r === r) this.input(p.id, { r, ms, move }); }, ms);
       }
@@ -229,6 +229,8 @@
       if (!this.alive.has(id) || this.inputs.has(id)) return false;
       if (a.r != null && a.r !== this.r) return false;
       const samurai = this.cfg.mode === 'samurai';
+      // 사무라이는 고르기가 열리기 전에 누른 것은 없던 일
+      if (samurai && (this.phase === 'wait' || a.early)) return false;
       if (this.phase === 'wait' || (this.phase === 'signal' && a.early)) {
         this.inputs.set(id, { early: true });
         this.emit({ k: 'early', r: this.r, id });
@@ -242,7 +244,7 @@
       const move = samurai ? (MOVES.includes(a.move) ? a.move : null) : null;
       if (samurai && !move) return false;
       this.inputs.set(id, { ms, move });
-      if (ms < MIN_MS) this.emit({ k: 'early', r: this.r, id, jump: true });
+      if (!samurai && ms < MIN_MS) this.emit({ k: 'early', r: this.r, id, jump: true });
       this.checkAllIn();
       return true;
     }
@@ -265,7 +267,7 @@
       this.last = { r: this.r, sig: this.sig, rows, win: res.win, out: res.out, why: res.why };
       this.emit({ k: 'result', ...this.last, scores: { ...this.scores }, alive: [...this.alive], over: over != null, winnerId: over });
       if (over != null) this.finish(over, 'win');
-      else this.later(() => this.round(), res.win.length ? T.result[mode] : T.resultNone);
+      else this.later(() => this.round(), res.win.length ? T.result[mode] : T.resultNone[mode]);
     }
 
     overWinner() {
