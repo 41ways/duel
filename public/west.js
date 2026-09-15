@@ -459,13 +459,15 @@
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.font = this.titleFont ? this.titleFont(fs) : `${fs}px "Song Myung", ${FONT_T}`;   // 제목 서체: 송명(시안 3)
       const w0 = ctx.measureText('결').width, w1 = ctx.measureText('투').width;
-      const gap = fs * 0.06;
+      const gap = -fs * 0.03;                      // 베기 전엔 두 글자가 붙어 한 덩어리
       const x0 = cx - (w0 + w1 + gap) / 2 + w0 / 2;
       const x1 = x0 + w0 / 2 + gap + w1 / 2;
       const gapX = x0 + w0 / 2 + gap / 2;
       const cutAng = -1.12;                        // 오른쪽 위 → 왼쪽 아래
       const ux = Math.cos(cutAng), uy = Math.sin(cutAng);
-      const shift = cut ? fs * lerp(0.26, 0.17, easeOut((a - SL - 100) / 500)) : 0;
+      // 칼이 지나가는 순간부터 칼자국을 따라 미끄러져 엇갈린다 (조금 더 갔다가 되돌아와 멈춤)
+      const sa = a - SL - 60;
+      const shift = sa <= 0 ? 0 : fs * (sa < 220 ? lerp(0, 0.2, easeOut(sa / 220)) : lerp(0.2, 0.15, easeIO((sa - 220) / 380)));
       const textA = cut ? 1 : lit * 0.92;
       // 먹 붓자국 시안은 글자 뒤에 깔린다
       if ((this.cutStyle ?? 1) === 3 && a >= SL + 110) this.drawCutScar(3, easeOut((a - SL - 110) / 400), gapX, cy, ux, uy, fs, t);
