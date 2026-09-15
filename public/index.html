@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>결투</title>
+<meta name="description" content="지금! 이 뜨면 먼저 쏴라. 최대 네 명이 붙는 서부 총잡이 반응속도 결투.">
+<meta name="theme-color" content="#1a120c">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Rye&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="/style.css">
+<link rel="preload" as="image" href="/img/title.jpg">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤠</text></svg>">
+</head>
+<body data-view="title">
+
+<canvas id="scene" aria-hidden="true"></canvas>
+<div id="stage" aria-label="누르는 곳"></div>
+
+<header class="top">
+  <a class="brand" href="https://41ways.github.io/norara/">norara</a>
+  <span>
+    <button class="icon" id="muteBtn" aria-label="소리">🔊</button>
+    <button class="icon" id="quitBtn" aria-label="그만하기">✕</button>
+  </span>
+</header>
+
+<!-- 시작 -->
+<section id="title" class="view">
+  <h1 class="logo">결투<small>DUEL</small></h1>
+  <button class="btn primary big" id="startGameBtn">게임 시작</button>
+</section>
+
+<!-- 처음 -->
+<section id="home" class="view">
+  <div class="poster">
+    <h2>결투</h2>
+    <p class="how">멀리 선 상대를 노려보다가 <b>지금!</b> 이 뜨면 클릭. 먼저 쏜 사람이 이긴다. 그 전에 쏘면 오발.</p>
+    <input id="nameIn" maxlength="10" placeholder="이름" autocomplete="off">
+    <button class="btn primary" id="createBtn">방 만들기</button>
+    <div class="row">
+      <input id="codeIn" maxlength="4" placeholder="방 코드" autocomplete="off" autocapitalize="characters">
+      <button class="btn" id="joinBtn">들어가기</button>
+    </div>
+    <hr>
+    <div class="row">
+      <button class="btn" id="soloBtn">봇이랑 연습</button>
+      <button class="btn" id="pairBtn">한 기기 둘이</button>
+    </div>
+    <div class="row small">
+      <label>봇 <select id="botN"><option>1</option><option>2</option><option>3</option></select>명</label>
+      <label>실력 <select id="botLv"><option value="easy">쉬움</option><option value="normal" selected>보통</option><option value="hard">어려움</option></select></label>
+    </div>
+    <p class="err" id="homeErr"></p>
+  </div>
+</section>
+
+<!-- 대기실 -->
+<section id="lobby" class="view">
+  <div class="poster">
+    <div class="row between">
+      <div><small>방 코드</small><div class="code" id="roomCode">----</div></div>
+      <button class="btn slim" id="copyBtn">초대 링크 복사</button>
+    </div>
+    <ul class="list" id="plist"></ul>
+    <div class="row" id="botRow">
+      <button class="btn slim" id="addBotBtn">+ 봇</button>
+      <select id="addBotLv"><option value="easy">쉬움</option><option value="normal" selected>보통</option><option value="hard">어려움</option></select>
+    </div>
+    <div class="row small" id="cfgRow">
+      <label>판 <select data-cfg="target"><option value="1">단판</option><option value="3">3선승</option><option value="5">5선승</option></select></label>
+      <label>신호 <select data-cfg="signal"><option value="mix">화면</option><option value="sound">소리만</option></select></label>
+    </div>
+    <p class="err" id="lobbyErr"></p>
+    <div class="row">
+      <button class="btn" id="leaveBtn">나가기</button>
+      <button class="btn primary" id="startBtn">결투 시작</button>
+    </div>
+  </div>
+</section>
+
+<!-- 끝 -->
+<section id="over" class="view">
+  <div class="poster">
+    <ul class="list" id="overList"></ul>
+    <button class="btn primary" id="againBtn">한 판 더</button>
+    <button class="btn" id="lobbyBtn">대기실로</button>
+    <button class="btn" id="homeBtn">처음으로</button>
+    <p class="small" id="overWait"></p>
+  </div>
+</section>
+
+<div id="toast"></div>
+
+<script src="/duel.js"></script>
+<script src="/sound.js"></script>
+<script src="/west.js"></script>
+<script src="/app.js"></script>
+</body>
+</html>

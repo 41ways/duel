@@ -1,0 +1,52 @@
+/* 그림은 캔버스가 다 그린다. 여기는 단추와 전단 한 장뿐. */
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; overflow: hidden; background: #0b0806; color: #2a1c12; font: 15px/1.5 "Pretendard Variable", system-ui, sans-serif; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
+button, input, select { font: inherit; color: inherit; }
+#scene, #stage { position: fixed; inset: 0; width: 100%; height: 100%; }
+#stage { display: none; cursor: crosshair; touch-action: none; }
+body[data-view="game"] #stage { display: block; }
+
+.top { position: fixed; top: 0; left: 0; right: 0; z-index: 5; display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; }
+.brand { color: #fff8; text-decoration: none; font-weight: 700; font-size: 13px; }
+.icon { width: 36px; height: 36px; border: 0; border-radius: 50%; background: #0006; color: #fff; cursor: pointer; }
+#quitBtn { display: none; }
+body[data-view="game"] #quitBtn, body[data-view="lobby"] #quitBtn, body[data-view="over"] #quitBtn { display: inline-block; }
+
+.view { position: fixed; inset: 0; z-index: 3; display: none; padding: 60px 16px 24px; align-items: center; justify-content: flex-end; flex-direction: column; overflow-y: auto; }
+body[data-view="title"] #title, body[data-view="home"] #home, body[data-view="lobby"] #lobby, body[data-view="over"] #over { display: flex; }
+#home, #lobby, #over { align-items: flex-start; justify-content: flex-end; padding-left: max(16px, 4vw); }
+
+.logo { position: absolute; top: 14vh; left: 0; right: 0; margin: 0; text-align: center; color: #fff6e6; font: clamp(80px, 16vw, 200px)/1 "Black Han Sans", sans-serif; text-shadow: 0 6px 30px #000a; }
+.logo small { display: block; font: clamp(20px, 3vw, 36px)/1.6 "Rye", serif; letter-spacing: .3em; color: #f0c070; }
+#title { padding-bottom: 12vh; }
+
+.poster { width: min(360px, 100%); display: grid; gap: 10px; padding: 22px; background: #eadcbf; border-radius: 4px; box-shadow: 0 0 0 1px #3c2310, 0 20px 60px #000a; }
+.poster h2 { margin: 0; font: 44px/1 "Black Han Sans", sans-serif; color: #8e2f22; }
+.how { margin: 0; font-size: 13.5px; }
+.how b { color: #8e2f22; }
+input, select { border: 0; border-bottom: 2px solid #2a1c1280; background: #fff6; padding: 8px 10px; outline: none; user-select: text; min-width: 0; }
+hr { border: 0; border-top: 1px dashed #2a1c1255; margin: 4px 0; width: 100%; }
+.row { display: flex; gap: 8px; align-items: center; }
+.row > * { flex: 1; }
+.between { justify-content: space-between; }
+.between > * { flex: none; }
+.small { font-size: 13px; font-weight: 700; }
+small { font-size: 12px; opacity: .7; font-weight: 700; }
+.btn { padding: 10px 12px; border: 2px solid #2a1c12; border-radius: 6px; background: transparent; font-weight: 800; cursor: pointer; }
+.btn:disabled { opacity: .5; cursor: default; }
+.btn.primary { background: #8e2f22; border-color: #0005; color: #fbeedd; font: 20px "Black Han Sans", sans-serif; }
+.btn.big { width: min(320px, 90%); font-size: 26px; padding: 14px; flex: none; }
+.btn.slim { padding: 6px 10px; font-size: 13px; }
+.code { font: 40px/1 "Black Han Sans", sans-serif; letter-spacing: .12em; color: #8e2f22; }
+.list { list-style: none; margin: 0; padding: 0; }
+.list li { display: flex; gap: 8px; align-items: center; padding: 7px 2px; border-bottom: 1px dashed #2a1c1240; }
+.list li span { flex: 1; font-weight: 700; }
+.list li em { font-style: normal; font-size: 12px; opacity: .7; }
+.list li.win span { color: #8e2f22; }
+.kick { border: 0; background: none; cursor: pointer; opacity: .5; }
+.err { margin: 0; color: #8e2f22; font-weight: 700; font-size: 13px; min-height: 1em; }
+
+#toast { position: fixed; left: 50%; bottom: 24px; z-index: 9; transform: translateX(-50%); background: #000d; color: #fff; padding: 9px 14px; border-radius: 8px; opacity: 0; transition: opacity .25s; pointer-events: none; }
+#toast.on { opacity: 1; }
+
+@media (max-width: 700px) { #home, #lobby, #over { align-items: center; padding-left: 16px; } }
