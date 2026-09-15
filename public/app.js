@@ -35,14 +35,19 @@
       if (leavingEl) leavingEl.classList.remove('leaving');
       leavingEl = VIEW_EL[prev] ? document.getElementById(VIEW_EL[prev]) : null;
       if (leavingEl) leavingEl.classList.add('leaving');
-      wipeClip({ oldRight: innerWidth, newLeft: innerWidth });
+      wipeClip(w.wipe.kind === 'fade' ? { fade: 0 } : { oldRight: innerWidth, newLeft: innerWidth });
     }
   };
   function wipeClip(c) {
     const cur = VIEW_EL[document.body.dataset.view] ? document.getElementById(VIEW_EL[document.body.dataset.view]) : null;
     if (!c) {
-      if (cur) cur.style.clipPath = '';
-      if (leavingEl) { leavingEl.style.clipPath = ''; leavingEl.classList.remove('leaving'); leavingEl = null; }
+      if (cur) { cur.style.clipPath = ''; cur.style.opacity = ''; }
+      if (leavingEl) { leavingEl.style.clipPath = ''; leavingEl.style.opacity = ''; leavingEl.classList.remove('leaving'); leavingEl = null; }
+      return;
+    }
+    if (c.fade != null) {
+      if (cur) cur.style.opacity = c.fade;
+      if (leavingEl) leavingEl.style.opacity = 1 - c.fade;
       return;
     }
     if (cur) cur.style.clipPath = `inset(0 0 0 ${Math.max(0, c.newLeft)}px)`;
@@ -72,6 +77,7 @@
     const cast = players.map((p, i) => ({ id: p.id, name: p.name, char: i % CHARS.length, me: kind !== 'pair' && mine.includes(p.id) }));
     G = { kind, cfg, players: cast, mine: new Set(mine), foreId, duel, r: 0, phase: 'intro', locked: new Set(), sigAt: 0, best: {} };
     west.startMatch({ players: cast, foreId, target: cfg.target });
+    document.body.classList.toggle('pair', kind === 'pair');
     S.wind(true);
     view('game');
   }

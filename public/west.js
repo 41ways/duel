@@ -281,15 +281,15 @@
 
     shakeIt(dur, amp) { this.shake = { at: now(), dur, amp }; }
 
-    startWipe(to, onMid) {
+    startWipe(to, onMid, kind = 'weed') {
       // 지금 그림을 떠 두고, 새 장면 위를 회전초가 오른쪽→왼쪽으로 닦는다
       const snap = document.createElement('canvas');
       snap.width = this.cv.width; snap.height = this.cv.height;
       snap.getContext('2d').drawImage(this.cv, 0, 0);
-      this.wipe = { snap, at: now(), dur: 950 };
+      this.wipe = { snap, at: now(), dur: kind === 'fade' ? 700 : 950, kind };
       this.view = to;
       if (onMid) onMid();
-      this.S && this.S.whoosh(0.9);
+      if (kind === 'weed') this.S && this.S.whoosh(0.9);
     }
 
     spawnWeed(big) {
@@ -793,7 +793,7 @@
       const from = this.view;
       this.clearTimers();
       this.sel = { hover: null, split: 0.5, pick: null, pickAt: 0, from: 0.5, at: now() };
-      if (from === 'title') this.startWipe('select', null, 'flash'); else this.view = 'select';
+      if (from === 'title') this.startWipe('select', null, 'fade'); else this.view = 'select';   // 회전초는 서부 쪽에서만
       this.match = null;
     }
 
@@ -1086,7 +1086,7 @@
       const aspect = poster.width / poster.height;
       const fit = c => { const rw = Math.ceil(4 / c); return Math.min((r.height - (rw + 1) * 12) / rw, (r.width - (c + 1) * 28) / c / aspect); };
       const cols = fit(4) >= fit(2) ? 4 : 2, rows = cols === 4 ? 1 : 2;
-      const ph = fit(cols);
+      const ph = Math.max(40, fit(cols));          // 창이 아주 좁아도 음수가 되지 않게
       const pw = ph * aspect;
       const gx = (r.width - cols * pw) / (cols + 1);
       const gy = (r.height - rows * ph) / (rows + 1);
@@ -1221,7 +1221,7 @@
       const stamps = [];
       if (q.me) stamps.push('나');
       if (q.bot) stamps.push('BOT');
-      if (q.host) stamps.push('방장');
+
       stamps.forEach((stamp, si) => {
         const se = easeOut((t - q.at - 380 - si * 120) / 220);
         if (se <= 0) return;
@@ -1239,7 +1239,37 @@
         ctx.fillText(stamp, 0, 3 * k);
         ctx.restore();
       });
-      this.drawNail(pw / 2, 14 * k, 7 * k);
+      if (q.host) this.drawHostMark(pw / 2, 4 * k, k, alpha);
+      else this.drawNail(pw / 2, 14 * k, 7 * k);
+      ctx.restore();
+    }
+
+    /** 방장 표시 — WANTED 위, 집 모양 안에 H */
+    drawHostMark(cx, top, k, alpha) {
+      const { ctx } = this;
+      const w = 64 * k, h = 58 * k;
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.translate(cx, top);
+      ctx.fillStyle = '#8e2a1c';
+      ctx.strokeStyle = '#f3e1b8'; ctx.lineWidth = Math.max(1, 3 * k);
+      ctx.beginPath();
+      ctx.moveTo(0, -h * 0.12);
+      ctx.lineTo(w / 2, h * 0.36);
+      ctx.lineTo(w * 0.38, h * 0.36);
+      ctx.lineTo(w * 0.38, h * 0.88);
+      ctx.lineTo(-w * 0.38, h * 0.88);
+      ctx.lineTo(-w * 0.38, h * 0.36);
+      ctx.lineTo(-w / 2, h * 0.36);
+      ctx.closePath();
+      ctx.shadowColor = 'rgba(0,0,0,.5)'; ctx.shadowBlur = 6 * k; ctx.shadowOffsetY = 2 * k;
+      ctx.fill();
+      ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+      ctx.stroke();
+      ctx.fillStyle = '#f3e1b8';
+      ctx.font = `${30 * k}px Rye, ${FONT_W}`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('H', 0, h * 0.58);
       ctx.restore();
     }
 
@@ -2085,6 +2115,14 @@
       const { ctx, W, H, dpr } = this;
       const p = (t - w.at) / w.dur;
       if (p >= 1) { this.wipe = null; this.onWipe && this.onWipe(null); return; }
+      if (w.kind === 'fade') {
+        // 기본 나타나기 — 옛 화면이 서서히 사라진다
+        const k = 1 - easeIO(p);
+        ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = k; ctx.drawImage(w.snap, 0, 0); ctx.restore();
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        this.onWipe && this.onWipe({ fade: easeIO(p) });
+        return;
+      }
       const R = H * 0.62;
       const x = lerp(W + R * 1.2, -R * 1.4, easeIO(p));
       // 화면 위 글·창(DOM)도 회전초에 맞춰 — 지나간 오른쪽만 새 것, 왼쪽은 옛 것

@@ -44,13 +44,14 @@
   </div>
   <div class="sheet holed">
     <div class="hole" id="faceHole"></div>
+    <p class="doa">DEAD OR ALIVE</p>
     <label class="field"><span>NAME</span><input id="nameIn" maxlength="10" placeholder="이름을 적으세요" autocomplete="off"></label>
     <button class="btn primary" id="createBtn">방 만들기</button>
     <div class="joinrow">
       <label class="field"><span>No.</span><input id="codeIn" maxlength="4" placeholder="방 코드" autocomplete="off" autocapitalize="characters"></label>
       <button class="btn" id="joinBtn">들어가기</button>
     </div>
-    <button class="link" id="pairBtn">☞ 한 기기로 둘이 하기</button>
+    <button class="link" id="pairBtn">☞ 한 기기로 둘이 하기 <small>한 화면을 반으로 — 왼쪽 사람은 왼쪽을, 오른쪽 사람은 오른쪽을 클릭</small></button>
     <p class="err" id="homeErr"></p>
   </div>
 </section>
@@ -108,6 +109,7 @@
   </div>
 </section>
 
+<div id="pairHint"><span>◀ 왼쪽 사람 · 화면 왼쪽을 클릭</span><span>화면 오른쪽을 클릭 · 오른쪽 사람 ▶</span></div>
 <div id="toast"></div>
 
 <script src="/duel.js"></script>
