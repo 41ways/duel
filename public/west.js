@@ -1315,9 +1315,7 @@
         if (fr) { const k = fr.h / 150; to = { k, x: fr.x + fr.w / 2 - 165 * k, y: fr.y + fr.h / 2 - 72 * k }; }
         const e = this.homeFrom === 0.6 ? easeIO(a / 800) : 1;   // 사람이 먼저 자리를 잡는다(수배서는 0.75초 뒤에 올라옴)
         const k = lerp(from.k, to.k, e), mx = lerp(from.x, to.x, e), my = lerp(from.y, to.y, e);
-        // 사람은 수배서보다 멀리 있어 마우스를 따라 조금만 움직인다(수배서는 22px) — 구멍 속 얼굴이 살짝 어긋나며 깊이가 생긴다
-        const hp = this.homeParallax || { x: 0, y: 0 };
-        ctx.drawImage(man, mx + hp.x * 8, my + hp.y * 5 + Math.sin(t / 1400) * 1.2, man.width * k, man.height * k);
+        ctx.drawImage(man, mx, my + Math.sin(t / 1400) * 1.2, man.width * k, man.height * k);
       }
       void a;
       const shade = ctx.createLinearGradient(0, 0, W * 0.6, 0);
