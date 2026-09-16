@@ -1093,7 +1093,7 @@
   //   엇갈림 → 돌아서 다시 마주 봄 → 진 쪽이 무릎 → 목을 감쌈 → 피를 흘리며 고꾸라짐 → 쓰러짐 → (영상처럼) 이긴 쪽 등 뒤로 넘어가 빛과 함께 승자
   const X = {
     cross: 560,      // 둘이 서로를 스쳐 반대편으로
-    turn: 900,       // 돌아서기 시작
+    turn: 1080,      // 발도술 자세를 물고 있다가 돌아서기 시작
     turnDur: 420,
     kneel: 1700,     // 진 쪽이 털썩 무릎 꿇는다(캄캄해 누군지 모른다)
     clutch: 2250,    // 목을 감싼다
@@ -1102,7 +1102,8 @@
     cut: 4800,       // 이긴 쪽 등 뒤로 컷이 넘어간다
     drawReveal: 1900,
   };
-  const IAI_H = 0.78;   // 발도술 자세는 몸을 낮춘다 — 선 키의 78%
+  const IAI_H = 0.7;    // 발도술 자세는 몸을 낮춘다 — 선 키의 70%
+  const IAI_OUT = 0.05; // 벤 뒤 자세가 넓어 서로 붙어 보이지 않게 조금 더 바깥으로
 
   P.result = function (ev) {
     if (!isSam(this)) return base.result.call(this, ev);
@@ -1485,10 +1486,10 @@
       }
     }
     // 옆모습 그림은 왼쪽을 본다 — 오른쪽을 보려면 뒤집는다
-    const pose = (name, s, lit, h, cut) => {
+    const pose = (name, s, lit, h, cut, x = s.x) => {
       ctx.save();
       ctx.translate(s.x, 0); ctx.scale(s.sx, 1); ctx.translate(-s.x, 0);
-      this.samDrawPose(name, s.p.char, s.face > 0, lit, s.x, gy, h, cut);
+      this.samDrawPose(name, s.p.char, s.face > 0, lit, x, gy, h, cut);
       ctx.restore();
     };
     for (const s of seats) {
@@ -1502,14 +1503,15 @@
       const iai = turnP < 0.5;
       const poseName = iai ? 'sam_iai' : 'sam_stand';
       const poseH = iai ? fh * IAI_H : fh, poseCut = iai ? 1 : 0.9;
+      const px = iai ? s.x + s.dir * W * IAI_OUT * e : s.x;   // 벨수록 바깥으로 빠진다
       if (e < 1 && b > 30) {
         for (let g = 3; g >= 1; g--) {
           ctx.globalAlpha = 0.12 * g * (1 - e);
-          this.samDrawPose(poseName, s.p.char, s.dir > 0, 0, s.x - s.dir * g * W * 0.05, gy, poseH, poseCut);
+          this.samDrawPose(poseName, s.p.char, s.dir > 0, 0, px - s.dir * g * W * 0.05, gy, poseH, poseCut);
         }
         ctx.globalAlpha = 1;
       }
-      if (!lost || b < X.kneel) { pose(poseName, s, reveal, poseH, poseCut); continue; }
+      if (!lost || b < X.kneel) { pose(poseName, s, reveal, poseH, poseCut, px); continue; }
       // 진 쪽 — 이긴 쪽을 보고 무릎 → 목을 감쌈 → 피를 흘리며 고꾸라짐 → 앞으로 무너짐(겹쳐서 스르르 바뀐다)
       const kb = b - X.kneel;
       const kh = fh * 0.74 * lerp(1.12, 1, easeOut(kb / 220));
