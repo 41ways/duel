@@ -61,4 +61,5 @@
 node server.js       # http://localhost:8850
 npm test             # 규칙 16개
 node test/smoke.js   # 떠 있는 서버에 붙어 한 판 (7개)
+node test/sim.js ws://localhost:8850/ws 6   # 방 6개를 사람처럼 굴려 본다(봇 · 같은 기기 자리 · 끊김 · 다시 붙기)
 ```
