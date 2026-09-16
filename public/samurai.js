@@ -191,7 +191,7 @@
 
   /** img/sakura.webp 는 체크무늬 배경이 박힌 그림이라, 분홍빛만 남기고 꽃 한 송이 · 꽃잎 세 장을 잘라 둔다 */
   P.samPetalSprites = function () {
-    for (const n of ['sam_lobby_bg', 'sam_red_man', 'sam_blue_back', 'sam_death1', 'sam_death2', 'sam_death3', 'sam_death4', 'sam_stand']) this.samImg(n);   // 대기실 · 결과 그림도 미리
+    for (const n of ['sam_lobby_bg', 'sam_red_man', 'sam_blue_back', 'sam_death1', 'sam_death2', 'sam_death3', 'sam_death4', 'sam_stand', 'sam_iai']) this.samImg(n);   // 대기실 · 결과 그림도 미리
     if (this._petals) return this._petals;
     if (!this._sakuraImg) {
       const img = this._sakuraImg = new Image();
@@ -1102,6 +1102,7 @@
     cut: 4800,       // 이긴 쪽 등 뒤로 컷이 넘어간다
     drawReveal: 1900,
   };
+  const IAI_H = 0.78;   // 발도술 자세는 몸을 낮춘다 — 선 키의 78%
 
   P.result = function (ev) {
     if (!isSam(this)) return base.result.call(this, ev);
@@ -1497,14 +1498,18 @@
       const sg = ctx.createRadialGradient(s.x, gy, 0, s.x, gy, fh * 0.35);
       sg.addColorStop(0, 'rgba(0,0,0,.6)'); sg.addColorStop(1, 'rgba(0,0,0,0)');
       ctx.fillStyle = sg; ctx.beginPath(); ctx.ellipse(s.x, gy, fh * 0.35, fh * 0.045, 0, 0, TAU); ctx.fill();
+      // 스쳐 벨 때는 발도술 자세 — 돌아서면서(옆으로 얇아지는 사이) 선 자세로 바뀐다
+      const iai = turnP < 0.5;
+      const poseName = iai ? 'sam_iai' : 'sam_stand';
+      const poseH = iai ? fh * IAI_H : fh, poseCut = iai ? 1 : 0.9;
       if (e < 1 && b > 30) {
         for (let g = 3; g >= 1; g--) {
           ctx.globalAlpha = 0.12 * g * (1 - e);
-          this.samDrawPose('sam_stand', s.p.char, s.dir > 0, 0, s.x - s.dir * g * W * 0.05, gy, fh, 0.9);
+          this.samDrawPose(poseName, s.p.char, s.dir > 0, 0, s.x - s.dir * g * W * 0.05, gy, poseH, poseCut);
         }
         ctx.globalAlpha = 1;
       }
-      if (!lost || b < X.kneel) { pose('sam_stand', s, reveal, fh, 0.9); continue; }
+      if (!lost || b < X.kneel) { pose(poseName, s, reveal, poseH, poseCut); continue; }
       // 진 쪽 — 이긴 쪽을 보고 무릎 → 목을 감쌈 → 피를 흘리며 고꾸라짐 → 앞으로 무너짐(겹쳐서 스르르 바뀐다)
       const kb = b - X.kneel;
       const kh = fh * 0.74 * lerp(1.12, 1, easeOut(kb / 220));

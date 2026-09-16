@@ -531,7 +531,9 @@ body[data-mode="samurai"] #stage { cursor: default; }
 .mv-light .mv-in { left: calc(50% - 19vmin); top: calc(50% + 9vmin); }
 .mv-guard .mv-in { left: calc(50% + 19vmin); top: calc(50% + 9vmin); }
 .mv i { font: clamp(44px, 7vmin, 84px)/1 var(--jp); font-style: normal; }
-.mv b { font: 900 clamp(20px, 2.1vw, 28px) var(--kr); letter-spacing: .24em; padding-left: .24em; }
+.mv b { display: flex; align-items: baseline; gap: .5em; font: 900 clamp(20px, 2.1vw, 28px) var(--kr); letter-spacing: .24em; padding-left: .24em; }
+/* 가위바위보로 바꿔 읽는 쪽지 — 이름 옆에 작게 */
+.mv b em { font: 700 clamp(12px, 1.2vw, 15px) var(--kr); font-style: normal; letter-spacing: .06em; color: #d9c79a; opacity: .82; }
 .mv kbd { min-width: 24px; background: #ece5d6; color: #16151c; border-color: #16151c; font: 900 12px var(--kr); }
 .mv:hover, .mv:focus-visible { background: rgba(200,190,170,.13); outline: none; }
 .mv:hover .mv-in, .mv:focus-visible .mv-in { transform: translate(-50%, -50%) scale(1.35); text-shadow: 0 0 22px #ffe2b0aa, 0 2px 12px #000; }
