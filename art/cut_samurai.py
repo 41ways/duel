@@ -10,6 +10,11 @@ from pathlib import Path
 
 SRC = Path(__file__).parent / 'samuraifight.png'
 OUT = Path(__file__).parent.parent / 'public' / 'img' / 'sam_iai.png'
+OUT_HAND = Path(__file__).parent.parent / 'public' / 'img' / 'sam_iai_hand.png'
+
+# 칼을 뽑을 때 앞으로 나가는 손 — 누끼 그림에서 손 · 자루 · 코등이만 떼어 낸다(정규 좌표)
+HAND = (0.045, 0.325, 0.325, 0.565)   # 왼쪽, 위, 오른쪽, 아래
+HAND_FEATHER = 10                      # 가장자리를 흐려 실루엣에 자연스럽게 얹힌다
 
 # 발밑을 자르는 선 — 이 그림 한 장에 맞춰 잰 값이다(원본 1408×768)
 FLOOR_Y = 640                       # 이 아래로는 마루 · 그림자, 발만 예외
@@ -51,6 +56,21 @@ def main():
     OUT.parent.mkdir(parents=True, exist_ok=True)
     cv2.imwrite(str(OUT), out)
     print(OUT, out.shape)
+
+    # 손 · 자루 조각 — 잘린 자리가 티 나지 않게 가장자리를 흐린다
+    oh, ow = out.shape[:2]
+    x0, y0, x1, y1 = (int(HAND[0] * ow), int(HAND[1] * oh), int(HAND[2] * ow), int(HAND[3] * oh))
+    hand = out[y0:y1, x0:x1].copy()
+    hh, hw = hand.shape[:2]
+    ramp = np.ones((hh, hw), np.float32)
+    f = HAND_FEATHER
+    for i in range(f):
+        v = (i + 1) / (f + 1)
+        ramp[i, :] = np.minimum(ramp[i, :], v); ramp[hh - 1 - i, :] = np.minimum(ramp[hh - 1 - i, :], v)
+        ramp[:, i] = np.minimum(ramp[:, i], v); ramp[:, hw - 1 - i] = np.minimum(ramp[:, hw - 1 - i], v)
+    hand[:, :, 3] = (hand[:, :, 3].astype(np.float32) * ramp).astype(np.uint8)
+    cv2.imwrite(str(OUT_HAND), hand)
+    print(OUT_HAND, hand.shape, 'at', (x0 / ow, y0 / oh))
 
 
 if __name__ == '__main__':

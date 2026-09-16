@@ -207,7 +207,7 @@
 
   /** img/sakura.webp 는 체크무늬 배경이 박힌 그림이라, 분홍빛만 남기고 꽃 한 송이 · 꽃잎 세 장을 잘라 둔다 */
   P.samPetalSprites = function () {
-    for (const n of ['sam_lobby_bg', 'sam_red_man', 'sam_blue_back', 'sam_death1', 'sam_death2', 'sam_death3', 'sam_death4', 'sam_stand', 'sam_iai']) this.samImg(n);   // 대기실 · 결과 그림도 미리
+    for (const n of ['sam_lobby_bg', 'sam_red_man', 'sam_blue_back', 'sam_death1', 'sam_death2', 'sam_death3', 'sam_death4', 'sam_stand', 'sam_iai', 'sam_iai_hand']) this.samImg(n);   // 대기실 · 결과 그림도 미리
     if (this._petals) return this._petals;
     if (!this._sakuraImg) {
       const img = this._sakuraImg = new Image();
@@ -1499,34 +1499,81 @@
       const sg = ctx.createRadialGradient(s.x, gy, 0, s.x, gy, fh * 0.35);
       sg.addColorStop(0, 'rgba(0,0,0,.6)'); sg.addColorStop(1, 'rgba(0,0,0,0)');
       ctx.fillStyle = sg; ctx.beginPath(); ctx.ellipse(s.x, gy, fh * 0.35, fh * 0.045, 0, 0, TAU); ctx.fill();
-      // 숨을 죽이며 아주 조금 몸을 낮춘다
-      this.samDrawPose('sam_stand', s.p.char, s.dir > 0, 0, s.x, gy, fh * (1 - 0.02 * easeOut(u)), 0.9);
-      this.samDrawBlade(s.x, gy, fh, s.dir, u);
+      const h = fh * IAI_H;
+      this.samDrawPose('sam_iai', s.p.char, s.dir > 0, 0, s.x, gy, h, 1);
+      this.samIaiDraw(s.p.char, s.x, gy, h, s.dir > 0, u);
     }
     this.drawSamParticles(t);
     this.samSnow(t, true, 1);
   };
 
-  /** 칼집에서 조금 빠져나온 칼날 — 허리께에서 앞으로 나오며 끝이 반짝인다 */
-  P.samDrawBlade = function (x, gy, fh, dir, u) {
+  // 발도술 그림 안에서 칼이 지나는 선과 손 조각 자리(정규 좌표) — art/cut_samurai.py 와 짝이 맞는다
+  const AXIS = { gx: 0.315, gy: 0.410, tx: 0.873, ty: 0.375 };   // 코등이 → 칼 끝
+  const MOUTH = 0.47;      // 칼집 입 — 움직이지 않는다
+  const GUARD = 0.385;     // 다 뽑았을 때 코등이 자리(칼집 입에서 이만큼만)
+  const HAND_AT = { x: 0.0435, y: 0.3236 };
+
+  /**
+   * 발도술 자세에서 칼을 조금 뽑는다. u 0~1.
+   * 칼집 입은 그대로 두고 손 · 자루가 앞으로 나가며, 그 사이로 날이 드러난다. 다 나오면 칼집 입에서 한 번 번뜩.
+   */
+  P.samIaiDraw = function (char, x, gy, h, flip, u) {
     const { ctx } = this;
-    const k = easeOut(u);
-    const len = fh * 0.2 * k;
-    if (len < 1) return;
-    const hx = x + dir * fh * 0.06, hy = gy - fh * 0.43;     // 칼집 입(코이구치)
-    const tx = hx + dir * len, ty = hy - len * 0.24;         // 날 끝 — 앞위로 비스듬히
-    ctx.save();
-    ctx.globalCompositeOperation = 'lighter';
-    ctx.lineCap = 'round';
-    const g = ctx.createLinearGradient(hx, hy, tx, ty);
-    g.addColorStop(0, 'rgba(150,175,215,0)');
-    g.addColorStop(0.35, `rgba(190,215,255,${0.5 * k})`);
-    g.addColorStop(1, `rgba(255,255,255,${0.95 * k})`);
-    ctx.strokeStyle = g; ctx.lineWidth = Math.max(1.5, fh * 0.012);
-    ctx.shadowColor = 'rgba(175,205,255,.9)'; ctx.shadowBlur = fh * 0.05;
-    ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(tx, ty); ctx.stroke();
-    ctx.restore();
-    if (u > 0.5) this.samGlint(tx, ty, fh * 0.06, clamp((u - 0.5) / 0.5));   // 날 끝만 살짝 번뜩
+    const img = this.samImg('sam_iai');
+    if (!img) return;
+    const k = easeOut(clamp(u));
+    const w = img.width * h / img.height, left = x - w / 2, top = gy - h;
+    const at = (nx, ny) => [left + (flip ? 1 - nx : nx) * w, top + ny * h];
+    const onAxis = s => {
+      const [ax, ay] = at(AXIS.gx, AXIS.gy), [bx, by] = at(AXIS.tx, AXIS.ty);
+      const q = (s - AXIS.gx) / (AXIS.tx - AXIS.gx);
+      return [ax + (bx - ax) * q, ay + (by - ay) * q];
+    };
+    const M = onAxis(MOUTH), G = onAxis(MOUTH + (GUARD - MOUTH) * k);
+    if (k > 0.02) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      const g = ctx.createLinearGradient(M[0], M[1], G[0], G[1]);
+      g.addColorStop(0, 'rgba(190,215,255,0)');
+      g.addColorStop(0.25, 'rgba(190,215,255,.55)');
+      g.addColorStop(1, 'rgba(255,255,255,.95)');
+      ctx.strokeStyle = g; ctx.lineWidth = Math.max(2, h * 0.019);
+      ctx.shadowColor = 'rgba(170,205,255,.9)'; ctx.shadowBlur = h * 0.05;
+      ctx.beginPath(); ctx.moveTo(M[0], M[1]); ctx.lineTo(G[0], G[1]); ctx.stroke();
+      ctx.restore();
+    }
+    // 손 · 자루 — 칼집 입에서 앞으로
+    const hand = this.samPose('sam_iai_hand', char, flip, false);
+    if (hand) {
+      const hw = hand.width * h / img.height, hh = hand.height * h / img.height;
+      const [hx, hy] = at(flip ? HAND_AT.x + hand.width / img.width : HAND_AT.x, HAND_AT.y);
+      const back = onAxis(MOUTH), front = onAxis(GUARD);
+      const dx = (back[0] - front[0]) * (1 - k), dy = (back[1] - front[1]) * (1 - k);
+      ctx.drawImage(hand, hx + dx, hy + dy, hw, hh);
+    }
+    // 드러나는 만큼 흰 빛이 날을 따라 손 쪽으로 훑고 지나간다
+    if (k > 0.04 && u < 0.95) {
+      const q = clamp((u - 0.05) / 0.62);
+      const sx = M[0] + (G[0] - M[0]) * q, sy = M[1] + (G[1] - M[1]) * q, a2 = Math.sin(Math.PI * q);
+      if (a2 > 0.01) {
+        // 날 위를 달리는 빛 — 동그란 덩어리가 아니라 날을 따라 길쭉하게
+        const dx = G[0] - M[0], dy = G[1] - M[1], len = Math.hypot(dx, dy) || 1;
+        const ux = dx / len, uy = dy / len, half = h * 0.055;
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.lineCap = 'round';
+        const lg = ctx.createLinearGradient(sx - ux * half, sy - uy * half, sx + ux * half, sy + uy * half);
+        lg.addColorStop(0, 'rgba(200,225,255,0)');
+        lg.addColorStop(0.5, `rgba(255,255,255,${0.95 * a2})`);
+        lg.addColorStop(1, 'rgba(200,225,255,0)');
+        ctx.strokeStyle = lg; ctx.lineWidth = Math.max(3, h * 0.028);
+        ctx.shadowColor = `rgba(190,220,255,${0.8 * a2})`; ctx.shadowBlur = h * 0.03;
+        ctx.beginPath(); ctx.moveTo(sx - ux * half, sy - uy * half); ctx.lineTo(sx + ux * half, sy + uy * half); ctx.stroke();
+        ctx.restore();
+      }
+    }
+    // 빛이 다 훑고 나면 칼집 입에서 한 번 번뜩
+    if (u > 0.72) this.samGlint(M[0], M[1], h * 0.09, clamp((u - 0.72) / 0.28));
   };
 
   /** 스쳐 지나간 뒤 — 옆모습 두 사람: 엇갈림 → 돌아서 마주 봄 → 진 쪽 무릎 · 목을 감쌈 · 고꾸라짐 → 쓰러짐. 비기면 불똥 뒤 빛이 돌아온다 */
