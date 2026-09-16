@@ -64,7 +64,7 @@
     this.samHomeFromSelect = from === 'select';
     if (from === 'select') this.view = 'samhome';
     else this.startWipe('samhome', null, from === 'title' ? 'fade' : 'sakura');
-    this.match = null;
+    this.dropMatch();
   };
 
   P.backToSelect = function () {
@@ -82,7 +82,7 @@
       this.boardAt = now();
       if (['title', 'samhome', 'select', 'samduel', 'samversus'].includes(this.view)) this.startWipe('samboard', null, this.view === 'title' ? 'fade' : 'sakura');
       else this.view = 'samboard';
-      this.match = null;
+      this.dropMatch();
     }
     const keep = new Set();
     list.slice(0, 2).forEach((p, i) => {
@@ -134,12 +134,20 @@
     };
   })(P.startMatch);
 
-  P.resumeView = function () {
-    if (!isSam(this)) return base.resumeView.call(this);
+  /** 판을 접는다 — 옛 장면을 계속 그리며 닦는 중이면(wipe.live) 다 닦인 뒤에 */
+  P.dropMatch = function () {
+    const w = this.wipe;
+    if (w && w.live) { setTimeout(() => { this.match = null; }, w.dur + 60); return; }   // 다 닦인 뒤에 접는다
+    this.match = null;
+  };
+
+  P.resumeView = function (snap) {
+    if (!isSam(this)) return base.resumeView.call(this, snap);
     this.clearTimers();
     this.wipe = null;
     this.view = 'samduel';
     this.duelAt = now();
+    this.resumeMatch(snap);
   };
 
   P.decoy = function (ev) {
@@ -1391,8 +1399,8 @@
     cs.addColorStop(0, 'rgba(10,14,24,.55)'); cs.addColorStop(1, 'rgba(10,14,24,0)');
     ctx.fillStyle = cs;
     ctx.beginPath(); ctx.ellipse(x, y, h * 0.3, h * 0.05, 0, 0, TAU); ctx.fill();
-    const sy = 1 - stance * 0.07, sx = 1 + stance * 0.03;
-    ctx.drawImage(man, x - w * sx / 2, y - h * sy + Math.sin(t / 1500) * 0.6, w * sx, h * sy);
+    // 사람은 그대로 — 자세를 잡는 느낌은 카메라가 조금 다가가는 것으로만 낸다
+    ctx.drawImage(man, x - w / 2, y - h + Math.sin(t / 1500) * 0.6, w, h);
     ctx.restore();
   };
 
@@ -1403,7 +1411,7 @@
     if (!back) return;
     const slideIn = (1 - easeOut(since / 900)) * H * 0.35;
     const h = H * 1.25, w = back.width * h / back.height;
-    const cx = W * 0.2, top = H * 0.2 + slideIn + stance * H * 0.05;
+    const cx = W * 0.2, top = H * 0.2 + slideIn;
     const ra = t - this.fore.raiseAt;
     const grip = ra >= 0 && ra < 300 ? Math.sin(ra / 300 * Math.PI) * 5 : 0;
     // 고른 기술은 결과 전까지 드러내지 않는다 — 칼자루를 고쳐 쥐는 움찔만
@@ -1622,14 +1630,15 @@
         ctx.beginPath(); ctx.moveTo(x0, H * y0); ctx.lineTo(x1, lerp(H * y0, H * y1, e2)); ctx.stroke();
       }
       ctx.restore();
-      if (!res.sparked) {
-        res.sparked = true;
-        const R = Math.random;
-        this.samSparks = this.samSparks || [];
-        for (let i = 0; i < 70; i++) {
-          const an = -Math.PI * (0.05 + R() * 0.9) + (R() < 0.5 ? 0 : Math.PI * 0.1), sp = (0.3 + R()) * Math.min(W, H) * 1.1;
-          this.samSparks.push({ x: W * (0.42 + R() * 0.16), y: H * (0.44 + R() * 0.1), vx: Math.cos(an) * sp, vy: Math.sin(an) * sp, age: 0, life: 0.22 + R() * 0.32 });
-        }
+    }
+    // 불똥은 한 번만 — 첫 프레임이 늦어도(탭을 두고 왔다든지) 빠뜨리지 않는다
+    if (!res.sparked && b < 1400) {
+      res.sparked = true;
+      const R = Math.random;
+      this.samSparks = this.samSparks || [];
+      for (let i = 0; i < 70; i++) {
+        const an = -Math.PI * (0.05 + R() * 0.9) + (R() < 0.5 ? 0 : Math.PI * 0.1), sp = (0.3 + R()) * Math.min(W, H) * 1.1;
+        this.samSparks.push({ x: W * (0.42 + R() * 0.16), y: H * (0.44 + R() * 0.1), vx: Math.cos(an) * sp, vy: Math.sin(an) * sp, age: 0, life: 0.22 + R() * 0.32 });
       }
     }
     // 컷이 넘어가기 직전 암전

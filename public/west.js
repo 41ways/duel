@@ -180,17 +180,31 @@
     /** players: [{id, name, char, me}], foreId, oppOf(r) 는 app 이 정하지 않고 여기서 돌린다 */
     startMatch({ players, foreId, target }) {
       this.clearTimers();
-      this.match = { players, foreId, target, scores: {}, r: 0, phase: 'intro', res: null, oppId: null, sigAt: 0, fake: null };
+      this.match = { players, foreId, target, scores: {}, r: 0, phase: 'intro', res: null, oppId: null, sigAt: 0, fake: null, raised: new Set(), early: new Set() };
       for (const p of players) this.match.scores[p.id] = 0;
       this.far.clear();
     }
 
     /** 판 도중에 다시 붙었다 — 연출 없이 결투 장면부터 (앞 화면이 뒤에 남아 있지 않게) */
-    resumeView() {
+    resumeView(snap) {
       this.clearTimers();
       this.wipe = null;
       this.view = 'duel';
       this.duelAt = now();
+      this.resumeMatch(snap);
+    }
+
+    /** 다시 붙은 자리에 맞춰 점수 · 상대 · 옷차림을 채운다(다음 라운드 전까지 비어 보이지 않게) */
+    resumeMatch(snap) {
+      const m = this.match;
+      if (!m || !snap) return;
+      m.r = snap.r || 0;
+      if (snap.scores) m.scores = { ...m.scores, ...snap.scores };
+      const alive = (snap.alive && snap.alive.length ? snap.alive : m.players.map(p => p.id)).filter(id => m.players.some(p => p.id === id));
+      const others = alive.filter(id => id !== m.foreId);
+      m.fighters = alive;
+      m.oppId = others.length ? others[Math.max(0, m.r - 1) % others.length] : null;
+      this.fore.char = (this.pl(m.foreId) || {}).char || 0;
     }
 
     pl(id) { return this.match && this.match.players.find(p => p.id === id); }

@@ -23,7 +23,7 @@
   west.onWipe = c => wipeClip(c);
   let G = null;      // 지금 하는 판
   let N = null;      // 서버 방 상태
-  let overT = null;
+  let overT = null, moveT = null;
 
   // 서부(west) · 사무라이(samurai) — 화면 글자 · 서체 · 캔버스 연출이 통째로 바뀐다
   let mode = 'west';
@@ -134,6 +134,8 @@
           const box = $('#moves');
           box.classList.remove('timing'); void box.offsetWidth; box.classList.add('timing');
           document.body.classList.add('live');
+          clearTimeout(moveT);
+          moveT = setTimeout(() => box.classList.add('locked'), R.LIMIT.samurai);   // 시간이 다 되면 칸을 닫는다
           break;
         }
         if (ev.kind === 'bell') S.bell(); else if (ev.kind === 'gong') S.gong(); else S.hit();
@@ -156,6 +158,9 @@
         break;
       case 'over':
         G.phase = 'over';
+        S.stopMusic(0.3);                                   // 판정 없이 끝나도(상대가 나감) 노래는 멎는다
+        document.body.classList.remove('live');
+        clearTimeout(moveT);
         west.over(ev);
         clearTimeout(overT);
         overT = setTimeout(() => showOver(ev), 400);
@@ -212,6 +217,7 @@
     if (G.fighters && !G.fighters.includes(pid)) return;
     const sam = G.cfg.mode === 'samurai';
     if (sam && (!move || G.phase !== 'signal')) return;   // 사무라이는 고르기가 열렸을 때만
+    if (sam && performance.now() - G.sigAt > R.LIMIT.samurai) return;   // 모래시계가 끝난 뒤는 안 받는다
     const sound = () => (sam ? S.swing() : S.shot(false));   // 사무라이는 칼 휘두르는 소리, 서부는 총성
     if (G.phase === 'wait') {
       G.locked.add(pid);
@@ -232,6 +238,7 @@
 
   // 기술 단추 — 고르면 세 칸 모두 흐려진다(혼자일 때만 누를 수 있다)
   function resetMoves() {
+    clearTimeout(moveT);
     document.body.classList.remove('live');
     const box = $('#moves');
     box.classList.remove('locked', 'timing');
@@ -381,7 +388,7 @@
       enterGame({ kind: 'net', cfg: d.cfg, players: d.players, mine: seats.map(x => x.id), foreId: s.meId, duel: null });
       G.keys = seats.length > 1 ? new Map(seats.map(x => [x.key, x.id])) : null;
       resetMoves();                                         // 자리가 정해진 뒤라야 키 안내가 맞는다
-      if (d.r > 0) { G.phase = 'result'; G.r = d.r; west.resumeView(); }   // 판 도중에 붙었다 — 다음 라운드부터
+      if (d.r > 0) { G.phase = 'result'; G.r = d.r; west.resumeView({ r: d.r, scores: d.scores, alive: d.alive }); }   // 판 도중에 붙었다 — 다음 라운드부터
       if (s.phase === 'over') showOver({ winnerId: s.winnerId, scores: d.scores });
     }
     if (s.phase === 'over' && document.body.dataset.view === 'over') renderOverButtons();
@@ -619,6 +626,11 @@
     if (r.h < 20 || r.y + r.h < 0 || r.y > innerHeight) return null;
     return r;
   };
+  // 화면을 굴리거나 창 크기가 바뀌면 얼굴 칸 자리를 다시 잰다(캔버스 쪽 캐시를 지운다)
+  const faceMoved = () => { west._frAt = 0; };
+  $('#home').addEventListener('scroll', faceMoved, { passive: true });
+  addEventListener('resize', faceMoved);
+
   $('#startGameBtn').addEventListener('pointerenter', () => west.titleHover(true));
   $('#startGameBtn').addEventListener('pointerleave', () => west.titleHover(false));
   west.title();
