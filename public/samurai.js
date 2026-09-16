@@ -163,6 +163,8 @@
     if (!isSam(this)) return base.shoot.call(this, id);
     const m = this.match; if (!m) return;
     m.raised.add(id);
+    m.drawAt = m.drawAt || {};
+    if (m.drawAt[id] == null) m.drawAt[id] = now();      // 고른 순간부터 칼을 뽑는다
     if (id === m.foreId) { this.fore.raiseAt = now(); this.fore.move = move || null; this.shakeIt(120, 6); }
   };
 
@@ -1131,10 +1133,11 @@
     const winId = ev.win.length === 1 ? ev.win[0] : null;
     const loserId = winId != null ? (ev.rows.find(r => r.id !== winId) || {}).id : null;
     m.res = { at: now(), winId, loserId, why: ev.why, rows: ev.rows, over: ev.over };
+    m.drawAt = m.drawAt || {};
+    for (const row of ev.rows) if (m.drawAt[row.id] == null) m.drawAt[row.id] = now();   // 상대 칼도 이때 나온다
     // 소리 중 samuraistart · swing · swordfight 는 app.js 가 낸다. 여기는 흔들림 · 불똥 · 돌아섬 · 무릎 · 발소리 · 건넴 · 쓰러짐
     const S = this.S;
     const at = (ms, fn) => this.later(fn, CLASH + ms);
-    at(-READY, () => S && S.play('swordout', 0.9, () => S.whoosh(0.3)));   // 칼집에서 칼이 조금 빠진다
     this.later(() => { this.samFlash(140, 'rgba(240,246,255,'); this.shakeIt(240, 12); }, CLASH);
     at(X.turn, () => S && S.whoosh(0.4));
     // 영상 연출(VIDEO 를 켰을 때만) — 스쳐 지나가는 순간부터 영상
@@ -1190,13 +1193,6 @@
     const a = res ? t - res.at : -1;
     const bh = H * 0.09;
     // 스쳐 지나간 뒤는 다른 장면 — 캄캄한 옆모습
-    if (res && a >= CLASH - READY && a < CLASH && !res.video) {
-      this.drawSamReady(t, a - (CLASH - READY));
-      ctx.fillStyle = '#05060a';
-      ctx.fillRect(0, 0, W, bh); ctx.fillRect(0, H - bh, W, bh);
-      this.drawScores();
-      return;
-    }
     if (res && a >= CLASH) {
       this.drawSamCross(t, a - CLASH);
       ctx.fillStyle = '#05060a';
@@ -1207,6 +1203,15 @@
     }
     const since = t - (this.duelAt || t);
     const stance = this.samStance(t);
+    // 자세를 잡고 나면 옆모습(발도술)으로 넘어간다 — Y자가 열리기 전에
+    const prof = this.samProfileK(t);
+    if (prof >= 1 && !(res && res.video)) {
+      this.drawSamReady(t);
+      ctx.fillStyle = '#05060a';
+      ctx.fillRect(0, 0, W, bh); ctx.fillRect(0, H - bh, W, bh);
+      this.drawScores();
+      return;
+    }
     const tension = res ? easeIO(a / CLASH) : 0;
     ctx.save();
     const z = lerp(1.14, 1.0, easeOut(since / 1600)) + stance * 0.1 + tension * 0.08;
@@ -1241,13 +1246,21 @@
       vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, `rgba(0,0,0,${0.8 * k + (tension > 0 ? 0.1 * Math.abs(Math.sin(a / 240)) : 0)})`);
       ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
     }
-    // 고르기가 열리는 순간 — 어둠 속 칼날에 별처럼 한 번 번쩍(발도술 gif)
-    if (sigAt && t - sigAt < 700) this.samGlint(W * 0.27, H * 0.63, Math.min(W, H) * 0.12, (t - sigAt) / 700);
     this.drawSamParticles(t);
     this.samSnow(t, true, 1 + stance);
+    if (prof > 0 && !(res && res.video)) { ctx.globalAlpha = prof; this.drawSamReady(t); ctx.globalAlpha = 1; }
     ctx.fillStyle = '#05060a';
     ctx.fillRect(0, 0, W, bh); ctx.fillRect(0, H - bh, W, bh);
     this.drawScores();
+  };
+
+  /** 옆모습(발도술)으로 얼마나 넘어왔나 — 자세를 잡고 0.9초 뒤부터 0.5초에 걸쳐 */
+  P.samProfileK = function (t) {
+    const m = this.match;
+    if (!m) return 0;
+    if (m.res) return 1;
+    if (m.phase !== 'wait' && m.phase !== 'signal') return 0;
+    return clamp((t - (this.waitAt || t) - 900) / 500);
   };
 
   /* ─────────── 영상 (지금은 꺼 둠 — VIDEO) ─────────── */
@@ -1488,14 +1501,16 @@
   };
 
   /** 발도술 — 스쳐 벨 준비. 칼집에서 칼이 조금 빠져나와 달빛에 번뜩인다 */
-  P.drawSamReady = function (t, r) {
+  /** 발도술 자세로 마주 선 옆모습 — 고르는 동안 보이고, 고른 사람부터 칼이 나온다 */
+  P.drawSamReady = function (t) {
     const { ctx, W, H } = this;
-    const res = this.match.res;
-    const u = clamp(r / READY);
+    const m = this.match;
+    const [me, other] = this.samPair();
     const { gy, fh } = this.samNight(0);
-    const [lp, rp] = this.samSeatPair(res);
-    for (const s of [{ p: lp, x: W * 0.24, dir: 1 }, { p: rp, x: W * 0.76, dir: -1 }]) {
+    const drawAt = m.drawAt || {};
+    for (const s of [{ p: me, x: W * 0.24, dir: 1 }, { p: other, x: W * 0.76, dir: -1 }]) {
       if (!s.p) continue;
+      const u = drawAt[s.p.id] != null ? clamp((t - drawAt[s.p.id]) / READY) : 0;
       const sg = ctx.createRadialGradient(s.x, gy, 0, s.x, gy, fh * 0.35);
       sg.addColorStop(0, 'rgba(0,0,0,.6)'); sg.addColorStop(1, 'rgba(0,0,0,0)');
       ctx.fillStyle = sg; ctx.beginPath(); ctx.ellipse(s.x, gy, fh * 0.35, fh * 0.045, 0, 0, TAU); ctx.fill();

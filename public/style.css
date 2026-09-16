@@ -507,13 +507,18 @@ body[data-mode="samurai"] .ranks .rk, body[data-mode="samurai"] .ranks strong { 
 @property --left { syntax: '<number>'; inherits: false; initial-value: 1; }
 #moves {
   display: none; position: fixed; inset: 0; z-index: 4;
-  opacity: 0; pointer-events: none; transition: opacity .45s;
+  opacity: 0; pointer-events: none;
+  /* 가운데보다 조금 위에 — 스르르 커지며 나타난다 */
+  transform: translateY(-5vmin) scale(.965);
+  transition: opacity .5s ease, transform .55s cubic-bezier(.2,.8,.2,1);
   /* 화면을 다 가르지 않고 가운데 둥근 자리만 — 가장자리로 갈수록 칸 · 선이 흐려진다 */
   -webkit-mask: radial-gradient(circle at 50% 50%, #000 0, #000 24vmin, #0000 42vmin);
   mask: radial-gradient(circle at 50% 50%, #000 0, #000 24vmin, #0000 42vmin);
 }
 body[data-view="game"][data-mode="samurai"] #moves { display: block; }
-body.live #moves { opacity: 1; pointer-events: auto; }
+body.live #moves { opacity: 1; pointer-events: auto; transform: translateY(-5vmin) scale(1); }
+/* 고르고 나면 Y자는 스르르 걷히고 발도술 자세가 드러난다 */
+body.live #moves.locked { opacity: 0; pointer-events: none; transform: translateY(-5vmin) scale(1.03); transition: opacity .5s ease .1s, transform .6s ease; }
 body[data-mode="samurai"] #stage { cursor: default; }
 .mv {
   position: absolute; inset: 0; border: 0; padding: 0; margin: 0; cursor: pointer; color: #efe8da;

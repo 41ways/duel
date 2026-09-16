@@ -218,7 +218,7 @@
     const sam = G.cfg.mode === 'samurai';
     if (sam && (!move || G.phase !== 'signal')) return;   // 사무라이는 고르기가 열렸을 때만
     if (sam && performance.now() - G.sigAt > R.LIMIT.samurai) return;   // 모래시계가 끝난 뒤는 안 받는다
-    const sound = () => (sam ? S.swing() : S.shot(false));   // 사무라이는 칼 휘두르는 소리, 서부는 총성
+    const sound = () => (sam ? S.play('swordout', 0.9, () => S.swing()) : S.shot(false));   // 사무라이는 칼 뽑는 소리, 서부는 총성
     if (G.phase === 'wait') {
       G.locked.add(pid);
       west.shoot(pid, move);
