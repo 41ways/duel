@@ -158,6 +158,10 @@
         break;
       case 'over':
         G.phase = 'over';
+        if (gameAt && N && N.hostId === N.meId && window.norara) {
+          norara.ev('end', { n: N.players.filter(p => !p.bot).length, sec: Math.round((Date.now() - gameAt) / 1000) });
+          gameAt = 0;
+        }
         S.stopMusic(0.3);                                   // 판정 없이 끝나도(상대가 나감) 노래는 멎는다
         document.body.classList.remove('live');
         clearTimeout(moveT);
@@ -367,6 +371,8 @@
     }
   }
 
+  let gameAt = 0;                 // 이 판이 언제 시작했는지 (방장 화면에서만 쓴다)
+
   function onState(s) {
     const prev = N;
     N = s;
@@ -383,6 +389,11 @@
     const d = s.duel;
     if (!d) return;
     const fresh = !G || G.kind !== 'net' || (prev && prev.phase !== 'playing' && s.phase === 'playing');
+    // 판 수 세기 — 방장 화면에서만. 사람마다 보내면 한 판이 인원수만큼 세어진다.
+    if (prev && prev.phase !== 'playing' && s.phase === 'playing' && s.hostId === s.meId && window.norara) {
+      gameAt = Date.now();
+      norara.ev('start', { n: s.players.filter(p => !p.bot).length });
+    }
     if (fresh) {
       const seats = mySeats(s.players, s.meId);
       enterGame({ kind: 'net', cfg: d.cfg, players: d.players, mine: seats.map(x => x.id), foreId: s.meId, duel: null });
