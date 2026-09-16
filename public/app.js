@@ -613,7 +613,10 @@
   west.faceRect = () => {
     const hole = $('#faceHole'), sheet = hole.parentElement;
     if (document.body.dataset.view !== 'home' || !hole.offsetWidth) return null;
-    return { x: sheet.offsetLeft + sheet.clientLeft + hole.offsetLeft, y: sheet.offsetTop + sheet.clientTop + hole.offsetTop - $('#home').scrollTop, w: hole.offsetWidth, h: hole.offsetHeight };
+    const r = { x: sheet.offsetLeft + sheet.clientLeft + hole.offsetLeft, y: sheet.offsetTop + sheet.clientTop + hole.offsetTop - $('#home').scrollTop, w: hole.offsetWidth, h: hole.offsetHeight };
+    // 좁은 창에서 화면을 굴리면 구멍이 밖으로 나간다 — 그때는 사람을 구멍에 맞추지 않고 그냥 세운다
+    if (r.h < 20 || r.y + r.h < 0 || r.y > innerHeight) return null;
+    return r;
   };
   $('#startGameBtn').addEventListener('pointerenter', () => west.titleHover(true));
   $('#startGameBtn').addEventListener('pointerleave', () => west.titleHover(false));

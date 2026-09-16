@@ -573,10 +573,10 @@
   /** 대기방 자리 — 상대는 성문 앞 멀리, 나는 왼쪽 앞에 등을 보이고 */
   P.samLobbyLayout = function (r) {
     const oh = Math.max(110, Math.min(r.height * 0.6, r.width * 0.5));
-    return {
-      oh, ox: r.left + r.width * 0.63, oy: r.top + r.height * 0.8,
-      mh: r.height * 1.4, mx: r.left + r.width * 0.19, mtop: r.top + r.height * 0.2,
-    };
+    const mh = Math.min(r.height * 1.4, this.W * 1.7);
+    // 좁은 창에서 내 깃발(왼쪽으로 mh*0.25쯤 뻗는다)이 화면 밖으로 잘리지 않게 붙잡는다
+    const mx = clamp(r.left + r.width * 0.19, mh * 0.27 + 6, Math.max(mh * 0.27 + 6, this.W - mh * 0.24));
+    return { oh, ox: r.left + r.width * 0.63, oy: r.top + r.height * 0.8, mh, mx, mtop: r.top + r.height * 0.2 };
   };
 
   P.drawSamBoard = function (t) {
@@ -1102,6 +1102,7 @@
     cut: 4800,       // 이긴 쪽 등 뒤로 컷이 넘어간다
     drawReveal: 1900,
   };
+  const READY = 620;    // 스쳐 벨 준비 — 칼집에서 칼이 조금 나오고 날이 빛난다
   const IAI_H = 0.7;    // 발도술 자세는 몸을 낮춘다 — 선 키의 70%
   const IAI_OUT = 0.05; // 벤 뒤 자세가 넓어 서로 붙어 보이지 않게 조금 더 바깥으로
 
@@ -1117,6 +1118,7 @@
     // 소리 중 samuraistart · swing · swordfight 는 app.js 가 낸다. 여기는 흔들림 · 불똥 · 돌아섬 · 무릎 · 발소리 · 건넴 · 쓰러짐
     const S = this.S;
     const at = (ms, fn) => this.later(fn, CLASH + ms);
+    at(-READY, () => S && S.play('swordout', 0.9, () => S.whoosh(0.3)));   // 칼집에서 칼이 조금 빠진다
     this.later(() => { this.samFlash(140, 'rgba(240,246,255,'); this.shakeIt(240, 12); }, CLASH);
     at(X.turn, () => S && S.whoosh(0.4));
     // 영상 연출(VIDEO 를 켰을 때만) — 스쳐 지나가는 순간부터 영상
@@ -1172,6 +1174,13 @@
     const a = res ? t - res.at : -1;
     const bh = H * 0.09;
     // 스쳐 지나간 뒤는 다른 장면 — 캄캄한 옆모습
+    if (res && a >= CLASH - READY && a < CLASH && !res.video) {
+      this.drawSamReady(t, a - (CLASH - READY));
+      ctx.fillStyle = '#05060a';
+      ctx.fillRect(0, 0, W, bh); ctx.fillRect(0, H - bh, W, bh);
+      this.drawScores();
+      return;
+    }
     if (res && a >= CLASH) {
       this.drawSamCross(t, a - CLASH);
       ctx.fillStyle = '#05060a';
@@ -1435,16 +1444,9 @@
     }
   };
 
-  /** 스쳐 지나간 뒤 — 옆모습 두 사람: 엇갈림 → 돌아서 마주 봄 → 진 쪽 무릎 · 목을 감쌈 · 고꾸라짐 → 쓰러짐. 비기면 불똥 뒤 빛이 돌아온다 */
-  P.drawSamCross = function (t, b) {
+  /** 옆모습 장면의 밤 무대 — 배경 · 어둠 · 달빛 안개 · 바닥. reveal 0 이면 캄캄, 1 이면 밝아진다 */
+  P.samNight = function (reveal) {
     const { ctx, W, H } = this;
-    const m = this.match, res = m.res;
-    const [me, other] = this.samPair();
-    const win = res.winId, draw = win == null;
-    if (res.video && this.drawSamVideo(b, res.video)) { this.drawSamParticles(t); return; }
-    if (!draw && b >= X.cut) return this.drawSamAftermath(t, b - X.cut);
-    const reveal = draw ? easeIO((b - X.drawReveal) / 900) : 0;
-    // 배경 — 거의 캄캄한 달밤
     ctx.save();
     this.samCam(690, 470, 1.08);
     ctx.drawImage(this.img.mode_samurai_bg, 0, 0, BGW, BGH);
@@ -1459,12 +1461,71 @@
     const ground = ctx.createLinearGradient(0, gy - 6, 0, gy + H * 0.12);
     ground.addColorStop(0, 'rgba(120,135,165,.14)'); ground.addColorStop(1, 'rgba(120,135,165,0)');
     ctx.fillStyle = ground; ctx.fillRect(0, gy - 6, W, H * 0.14);
+    return { gy, fh };
+  };
+
+  /** 왼쪽 · 오른쪽에 설 사람 — 진 쪽이 왼쪽에서 출발해 오른쪽으로 스쳐 간다(무릎은 늘 오른쪽) */
+  P.samSeatPair = function (res) {
+    const [me, other] = this.samPair();
+    const loserOther = res.winId != null && other && other.id === res.loserId;
+    return loserOther ? [other, me] : [me, other];
+  };
+
+  /** 발도술 — 스쳐 벨 준비. 칼집에서 칼이 조금 빠져나와 달빛에 번뜩인다 */
+  P.drawSamReady = function (t, r) {
+    const { ctx, W, H } = this;
+    const res = this.match.res;
+    const u = clamp(r / READY);
+    const { gy, fh } = this.samNight(0);
+    const [lp, rp] = this.samSeatPair(res);
+    for (const s of [{ p: lp, x: W * 0.24, dir: 1 }, { p: rp, x: W * 0.76, dir: -1 }]) {
+      if (!s.p) continue;
+      const sg = ctx.createRadialGradient(s.x, gy, 0, s.x, gy, fh * 0.35);
+      sg.addColorStop(0, 'rgba(0,0,0,.6)'); sg.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = sg; ctx.beginPath(); ctx.ellipse(s.x, gy, fh * 0.35, fh * 0.045, 0, 0, TAU); ctx.fill();
+      // 숨을 죽이며 아주 조금 몸을 낮춘다
+      this.samDrawPose('sam_stand', s.p.char, s.dir > 0, 0, s.x, gy, fh * (1 - 0.02 * easeOut(u)), 0.9);
+      this.samDrawBlade(s.x, gy, fh, s.dir, u);
+    }
+    this.drawSamParticles(t);
+    this.samSnow(t, true, 1);
+  };
+
+  /** 칼집에서 조금 빠져나온 칼날 — 허리께에서 앞으로 나오며 끝이 반짝인다 */
+  P.samDrawBlade = function (x, gy, fh, dir, u) {
+    const { ctx } = this;
+    const k = easeOut(u);
+    const len = fh * 0.2 * k;
+    if (len < 1) return;
+    const hx = x + dir * fh * 0.06, hy = gy - fh * 0.43;     // 칼집 입(코이구치)
+    const tx = hx + dir * len, ty = hy - len * 0.24;         // 날 끝 — 앞위로 비스듬히
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.lineCap = 'round';
+    const g = ctx.createLinearGradient(hx, hy, tx, ty);
+    g.addColorStop(0, 'rgba(150,175,215,0)');
+    g.addColorStop(0.35, `rgba(190,215,255,${0.5 * k})`);
+    g.addColorStop(1, `rgba(255,255,255,${0.95 * k})`);
+    ctx.strokeStyle = g; ctx.lineWidth = Math.max(1.5, fh * 0.012);
+    ctx.shadowColor = 'rgba(175,205,255,.9)'; ctx.shadowBlur = fh * 0.05;
+    ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(tx, ty); ctx.stroke();
+    ctx.restore();
+    if (u > 0.5) this.samGlint(tx, ty, fh * 0.06, clamp((u - 0.5) / 0.5));   // 날 끝만 살짝 번뜩
+  };
+
+  /** 스쳐 지나간 뒤 — 옆모습 두 사람: 엇갈림 → 돌아서 마주 봄 → 진 쪽 무릎 · 목을 감쌈 · 고꾸라짐 → 쓰러짐. 비기면 불똥 뒤 빛이 돌아온다 */
+  P.drawSamCross = function (t, b) {
+    const { ctx, W, H } = this;
+    const m = this.match, res = m.res;
+    const win = res.winId, draw = win == null;
+    if (res.video && this.drawSamVideo(b, res.video)) { this.drawSamParticles(t); return; }
+    if (!draw && b >= X.cut) return this.drawSamAftermath(t, b - X.cut);
+    const reveal = draw ? easeIO((b - X.drawReveal) / 900) : 0;
+    const { gy, fh } = this.samNight(reveal);
     // 자리 — 나는 왼쪽에서 오른쪽으로, 상대는 오른쪽에서 왼쪽으로 스친다. face: 1 오른쪽을 봄, -1 왼쪽을 봄
     const e = easeIO(clamp(b / X.cross));
     const turnP = clamp((b - X.turn) / X.turnDur);
-    // 무릎 꿇는 쪽은 언제나 오른쪽 — 진 쪽이 왼쪽에서 출발해 오른쪽으로 스쳐 간다(캄캄해서 누군지는 안 보인다)
-    const loserOther = !draw && other && other.id === res.loserId;
-    const [lp, rp] = loserOther ? [other, me] : [me, other];
+    const [lp, rp] = this.samSeatPair(res);
     const seats = [
       { p: lp, from: W * 0.24, to: W * 0.72, dir: 1 },
       { p: rp, from: W * 0.76, to: W * 0.28, dir: -1 },
@@ -1557,9 +1618,9 @@
         res.sparked = true;
         const R = Math.random;
         this.samSparks = this.samSparks || [];
-        for (let i = 0; i < 90; i++) {
+        for (let i = 0; i < 70; i++) {
           const an = -Math.PI * (0.05 + R() * 0.9) + (R() < 0.5 ? 0 : Math.PI * 0.1), sp = (0.3 + R()) * Math.min(W, H) * 1.1;
-          this.samSparks.push({ x: W * (0.42 + R() * 0.16), y: H * (0.44 + R() * 0.1), vx: Math.cos(an) * sp, vy: Math.sin(an) * sp, age: 0, life: 0.35 + R() * 0.6 });
+          this.samSparks.push({ x: W * (0.42 + R() * 0.16), y: H * (0.44 + R() * 0.1), vx: Math.cos(an) * sp, vy: Math.sin(an) * sp, age: 0, life: 0.22 + R() * 0.32 });
         }
       }
     }
