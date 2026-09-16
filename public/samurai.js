@@ -111,6 +111,7 @@
     this.clearTimers();
     m.r = ev.r; m.phase = 'intro'; m.res = null; m.fighters = ev.fighters; m.scores = ev.scores;
     m.raised = new Set(); m.early = new Set(); m.sig = null; m.fake = null;
+    m.drawAt = {};                                  // 새 판 — 칼은 다시 칼집에
     const others = ev.fighters.filter(id => id !== m.foreId);
     m.oppId = others.length ? others[0] : null;
     this.fore.char = (this.pl(m.foreId) || {}).char || 0;
@@ -280,6 +281,13 @@
     ctx.beginPath(); ctx.rect(0, 0, Math.max(0, edge * dpr), H * dpr); ctx.clip();
     ctx.drawImage(w.snap, 0, 0);
     ctx.restore();
+    if (!w.live) {
+      // 떠 둔 한 장은 멈춰 있다 — 그 위로 눈만 계속 흩날리게 해서 화면이 굳어 보이지 않게
+      ctx.save();
+      ctx.beginPath(); ctx.rect(0, 0, Math.max(0, edge), H); ctx.clip();
+      this.samSnow(t, false, 1); this.samSnow(t, true, 1);
+      ctx.restore();
+    }
     for (let i = 0; i < strips; i++) {
       const sx = edge + fade * i / strips;
       if (sx >= W || sx + fade / strips <= 0) continue;
@@ -1205,8 +1213,9 @@
     const stance = this.samStance(t);
     // 자세를 잡고 나면 옆모습(발도술)으로 넘어간다 — Y자가 열리기 전에
     const prof = this.samProfileK(t);
-    if (prof >= 1 && !(res && res.video)) {
+    if (prof >= 0.5 && !(res && res.video)) {
       this.drawSamReady(t);
+      this.samCutVeil(prof);
       ctx.fillStyle = '#05060a';
       ctx.fillRect(0, 0, W, bh); ctx.fillRect(0, H - bh, W, bh);
       this.drawScores();
@@ -1248,19 +1257,29 @@
     }
     this.drawSamParticles(t);
     this.samSnow(t, true, 1 + stance);
-    if (prof > 0 && !(res && res.video)) { ctx.globalAlpha = prof; this.drawSamReady(t); ctx.globalAlpha = 1; }
+    this.samCutVeil(prof);
     ctx.fillStyle = '#05060a';
     ctx.fillRect(0, 0, W, bh); ctx.fillRect(0, H - bh, W, bh);
     this.drawScores();
   };
 
-  /** 옆모습(발도술)으로 얼마나 넘어왔나 — 자세를 잡고 0.9초 뒤부터 0.5초에 걸쳐 */
+  /** 옆모습(발도술)으로 얼마나 넘어왔나 — 자세를 잡고 0.7초 뒤부터 0.9초에 걸쳐 */
   P.samProfileK = function (t) {
     const m = this.match;
     if (!m) return 0;
     if (m.res) return 1;
     if (m.phase !== 'wait' && m.phase !== 'signal') return 0;
-    return clamp((t - (this.waitAt || t) - 900) / 500);
+    return clamp((t - (this.waitAt || t) - 700) / 900);
+  };
+
+  /** 컷이 바뀌는 사이 — 한가운데서 새까맣게 잠겼다가 걷힌다(두 장면을 겹쳐 지우면 어색하다) */
+  P.samCutVeil = function (prof) {
+    if (prof <= 0 || prof >= 1) return;
+    const { ctx, W, H } = this;
+    const k = easeIO(1 - Math.abs(prof - 0.5) * 2);
+    if (k <= 0) return;
+    ctx.fillStyle = `rgba(0,0,0,${k})`;
+    ctx.fillRect(0, 0, W, H);
   };
 
   /* ─────────── 영상 (지금은 꺼 둠 — VIDEO) ─────────── */
@@ -1566,28 +1585,7 @@
       const dx = (back[0] - front[0]) * (1 - k), dy = (back[1] - front[1]) * (1 - k);
       ctx.drawImage(hand, hx + dx, hy + dy, hw, hh);
     }
-    // 드러나는 만큼 흰 빛이 날을 따라 손 쪽으로 훑고 지나간다
-    if (k > 0.04 && u < 0.95) {
-      const q = clamp((u - 0.05) / 0.62);
-      const sx = M[0] + (G[0] - M[0]) * q, sy = M[1] + (G[1] - M[1]) * q, a2 = Math.sin(Math.PI * q);
-      if (a2 > 0.01) {
-        // 날 위를 달리는 빛 — 동그란 덩어리가 아니라 날을 따라 길쭉하게
-        const dx = G[0] - M[0], dy = G[1] - M[1], len = Math.hypot(dx, dy) || 1;
-        const ux = dx / len, uy = dy / len, half = h * 0.055;
-        ctx.save();
-        ctx.globalCompositeOperation = 'lighter';
-        ctx.lineCap = 'round';
-        const lg = ctx.createLinearGradient(sx - ux * half, sy - uy * half, sx + ux * half, sy + uy * half);
-        lg.addColorStop(0, 'rgba(200,225,255,0)');
-        lg.addColorStop(0.5, `rgba(255,255,255,${0.95 * a2})`);
-        lg.addColorStop(1, 'rgba(200,225,255,0)');
-        ctx.strokeStyle = lg; ctx.lineWidth = Math.max(3, h * 0.028);
-        ctx.shadowColor = `rgba(190,220,255,${0.8 * a2})`; ctx.shadowBlur = h * 0.03;
-        ctx.beginPath(); ctx.moveTo(sx - ux * half, sy - uy * half); ctx.lineTo(sx + ux * half, sy + uy * half); ctx.stroke();
-        ctx.restore();
-      }
-    }
-    // 빛이 다 훑고 나면 칼집 입에서 한 번 번뜩
+    // 다 뽑힌 순간 칼집 입에서 한 번 번뜩
     if (u > 0.72) this.samGlint(M[0], M[1], h * 0.09, clamp((u - 0.72) / 0.28));
   };
 
