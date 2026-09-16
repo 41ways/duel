@@ -93,7 +93,7 @@
       const delay = fresh ? 0 : 500 + i * 260;
       this.posters.set(p.id, { ...p, slot: i, at: now() + delay, leaving: 0 });
       // 상대가 스윽 떠오를 때 옷자락 소리
-      if (!p.me && this.S) setTimeout(() => this.S.whoosh(0.6), delay);
+      if (!p.me && this.S) this.later(() => this.S.whoosh(0.6), delay);
     });
     for (const q of this.posters.values()) {
       if (!keep.has(q.id) && !q.leaving) {
@@ -133,6 +133,14 @@
       this.startWipe('samversus', () => { this.versusAt = now() + 380; this._samVsHit = false; this.later(() => this.S && this.S.swing(), 300); }, 'sakura');
     };
   })(P.startMatch);
+
+  P.resumeView = function () {
+    if (!isSam(this)) return base.resumeView.call(this);
+    this.clearTimers();
+    this.wipe = null;
+    this.view = 'samduel';
+    this.duelAt = now();
+  };
 
   P.decoy = function (ev) {
     if (!isSam(this)) return base.decoy.call(this, ev);

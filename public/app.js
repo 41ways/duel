@@ -48,7 +48,7 @@
     document.body.dataset.view = v;
     const w = window.__west;
     if (w && w.wipe && performance.now() - w.wipe.at < 150 && prev !== v) {
-      if (leavingEl) leavingEl.classList.remove('leaving');
+      if (leavingEl) { leavingEl.style.clipPath = ''; leavingEl.style.opacity = ''; leavingEl.classList.remove('leaving'); }   // 닦기 도중에 또 바뀌어도 잘린 자국이 남지 않게
       leavingEl = VIEW_EL[prev] ? document.getElementById(VIEW_EL[prev]) : null;
       if (leavingEl) leavingEl.classList.add('leaving');
       wipeClip(w.wipe.kind === 'fade' ? { fade: 0 } : { oldRight: innerWidth, newLeft: innerWidth });
@@ -57,7 +57,7 @@
   function wipeClip(c) {
     const cur = VIEW_EL[document.body.dataset.view] ? document.getElementById(VIEW_EL[document.body.dataset.view]) : null;
     if (!c) {
-      if (cur) { cur.style.clipPath = ''; cur.style.opacity = ''; }
+      for (const id of Object.values(VIEW_EL)) { const el = document.getElementById(id); if (el) { el.style.clipPath = ''; el.style.opacity = ''; } }
       if (leavingEl) { leavingEl.style.clipPath = ''; leavingEl.style.opacity = ''; leavingEl.classList.remove('leaving'); leavingEl = null; }
       return;
     }
@@ -173,7 +173,7 @@
       <li class="${p.id === ev.winnerId ? 'win' : ''}" style="--i:${i}">
         <span class="rk">${i + 1}</span>
         ${sam ? `<span class="mon">${SCHARS[p.char % 4].jp[0]}</span>` : `<img src="/img/${CHARS[p.char].key}_bust.png" alt="">`}
-        <span><b>${esc(p.name)}${p.me ? ' <small style="display:inline">나</small>' : ''}</b><small>${(sam ? SCHARS[p.char % 4] : CHARS[p.char]).ko} · ${G.best[p.id] ? '최고 ' + (G.best[p.id] / 1000).toFixed(3) + '초' : '기록 없음'}</small></span>
+        <span><b>${esc(p.name)}${p.me ? ' <small style="display:inline">나</small>' : ''}</b><small>${(sam ? SCHARS[p.char % 4] : CHARS[p.char]).ko}${sam ? '' : ' · ' + (G.best[p.id] ? '최고 ' + (G.best[p.id] / 1000).toFixed(3) + '초' : '기록 없음')}</small></span>
         <strong>${ev.scores[p.id] || 0}<em>승</em></strong>
       </li>`).join('');
     renderOverButtons();
@@ -380,7 +380,8 @@
       const seats = mySeats(s.players, s.meId);
       enterGame({ kind: 'net', cfg: d.cfg, players: d.players, mine: seats.map(x => x.id), foreId: s.meId, duel: null });
       G.keys = seats.length > 1 ? new Map(seats.map(x => [x.key, x.id])) : null;
-      if (d.r > 0) { G.phase = 'result'; G.r = d.r; }       // 판 도중에 붙었다 — 다음 라운드부터
+      resetMoves();                                         // 자리가 정해진 뒤라야 키 안내가 맞는다
+      if (d.r > 0) { G.phase = 'result'; G.r = d.r; west.resumeView(); }   // 판 도중에 붙었다 — 다음 라운드부터
       if (s.phase === 'over') showOver({ winnerId: s.winnerId, scores: d.scores });
     }
     if (s.phase === 'over' && document.body.dataset.view === 'over') renderOverButtons();

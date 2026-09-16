@@ -174,7 +174,7 @@
     steps(dur) {
       if (!this.S) return;
       const n = Math.floor(dur / 430);
-      for (let i = 1; i < n; i++) setTimeout(() => this.S.step && this.S.step(0.15 + 0.5 * i / n), i * 430);
+      for (let i = 1; i < n; i++) this.later(() => this.S.step && this.S.step(0.15 + 0.5 * i / n), i * 430);
     }
 
     /** players: [{id, name, char, me}], foreId, oppOf(r) 는 app 이 정하지 않고 여기서 돌린다 */
@@ -183,6 +183,14 @@
       this.match = { players, foreId, target, scores: {}, r: 0, phase: 'intro', res: null, oppId: null, sigAt: 0, fake: null };
       for (const p of players) this.match.scores[p.id] = 0;
       this.far.clear();
+    }
+
+    /** 판 도중에 다시 붙었다 — 연출 없이 결투 장면부터 (앞 화면이 뒤에 남아 있지 않게) */
+    resumeView() {
+      this.clearTimers();
+      this.wipe = null;
+      this.view = 'duel';
+      this.duelAt = now();
     }
 
     pl(id) { return this.match && this.match.players.find(p => p.id === id); }
@@ -1051,7 +1059,7 @@
         const fresh = now() - this.boardAt > 300;
         const delay = fresh ? 0 : 500 + i * 160;
         this.posters.set(p.id, { ...p, slot: i, at: now() + delay, tilt: (Math.random() - 0.5) * 0.05, leaving: 0 });
-        if (this.S) setTimeout(() => { this.S.clunk(); this.S.clink(); }, delay + 200);
+        if (this.S) this.later(() => { this.S.clunk(); this.S.clink(); }, delay + 200);
       });
       for (const q of this.posters.values()) {
         if (!keep.has(q.id) && !q.leaving) {
