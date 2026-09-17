@@ -624,6 +624,21 @@
   $('#muteBtn').addEventListener('click', () => { S.setMuted(!S.muted); muteIcon(); });
   muteIcon();
 
+  /* ─────────────────────── 밝기 ─────────────────────── */
+  // 저장해 둔 것이 없으면 기기 설정을 따르고(<head> 에서 미리), 한 번 고르면 기억한다.
+  // 캔버스 연출은 건드리지 않는다 — 바뀌는 것은 캔버스 위에 얹힌 종이 · 판 · 단추뿐.
+  function setTheme(t) {
+    document.documentElement.dataset.theme = t;
+    local.set('duel.theme', t);
+    const b = $('#themeBtn');
+    b.textContent = t === 'dark' ? '☀️' : '🌙';
+    b.setAttribute('aria-label', t === 'dark' ? '밝게' : '어둡게');
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.content = t === 'dark' ? '#050403' : '#1a120c';
+  }
+  $('#themeBtn').addEventListener('click', () => setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'));
+  setTheme(document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light');
+
   /* ─────────────────────── 시작 ─────────────────────── */
 
   west.btnRect = () => $('#startGameBtn').getBoundingClientRect();

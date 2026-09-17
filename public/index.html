@@ -6,6 +6,14 @@
 <title>결투</title>
 <meta name="description" content="지금! 이 뜨면 먼저 쏴라. 최대 네 명이 붙는 서부 총잡이 반응속도 결투.">
 <meta name="theme-color" content="#1a120c">
+<script>
+  // 첫 페인트 전에 밝기를 정해서 화면이 번쩍이지 않게 한다
+  try {
+    var t = localStorage.getItem('duel.theme');
+    if (!t) t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    document.documentElement.dataset.theme = t;
+  } catch (e) {}
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Rye&family=Hahmlet:wght@700;900&family=Nanum+Pen+Script&family=Nanum+Brush+Script&family=Song+Myung&display=swap">
@@ -23,6 +31,7 @@
   <a class="brand" href="https://41ways.github.io/norara/">norara</a>
   <span>
     <button class="icon" id="muteBtn" aria-label="소리">🔊</button>
+    <button class="icon" id="themeBtn" aria-label="어둡게">🌙</button>
     <button class="icon" id="quitBtn" aria-label="그만하기">✕</button>
   </span>
 </header>
