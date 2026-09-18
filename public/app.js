@@ -46,6 +46,7 @@
   const view = v => {
     const prev = document.body.dataset.view;
     document.body.dataset.view = v;
+    chatLook();
     const w = window.__west;
     if (w && w.wipe && performance.now() - w.wipe.at < 150 && prev !== v) {
       if (leavingEl) { leavingEl.style.clipPath = ''; leavingEl.style.opacity = ''; leavingEl.classList.remove('leaving'); }   // 닦기 도중에 또 바뀌어도 잘린 자국이 남지 않게
@@ -346,6 +347,7 @@
   }
   function forget() {
     want = false; N = null;
+    chatReset();
     sess.set('duel.code', null); sess.set('duel.token', null);
     history.replaceState(null, '', location.pathname);
   }
@@ -354,6 +356,7 @@
     switch (m.t) {
       case 'joined':
         $('#chatLog').innerHTML = '';
+        chatReset();
         sess.set('duel.code', m.code); sess.set('duel.token', m.token);
         want = true;
         history.replaceState(null, '', `?room=${m.code}`);
@@ -534,7 +537,87 @@
     log.appendChild(li);
     while (log.children.length > 40) log.firstChild.remove();
     log.scrollTop = log.scrollHeight;
+
+    if (m.sys || (N && m.from === N.meId)) return;
+    if (chatHere() && !chatSeen()) { chatUnread++; chatBadge(); chatPeek(m.name, m.text); }
+    if (document.hidden || !document.hasFocus()) { chatAway++; chatTitle(); }
   }
+
+  /* 채팅은 대기방 아래칸에 늘 펼쳐져 있다. 그래도 폰에서는 한 줄로 쌓인 대기방을 내려 방 설정·결투 시작을
+     만지는 동안 채팅이 위로 밀려 안 보인다. 그래서 채팅이 안 보이는 동안 온 남의 말은 세 군데로 알린다 —
+     머리글 채팅 단추의 빨간 숫자(늘 때마다 통 튄다), 그 아래 말풍선(읽을 만큼 떠 있다 사라진다),
+     다른 탭·창에 가 있으면 탭 제목 앞의 (n). 단추는 안 읽은 말이 있을 때만 뜨고, 누르면 채팅으로 올라간다.
+     채팅이 화면에 들어오면 숫자는 저절로 지운다. 결투 중·결과 화면에서는 채팅이 없어서 탭 제목만 센다. */
+  let chatUnread = 0, chatAway = 0, chatPeekT = 0;
+  const chatTitle0 = document.title;
+  const chatHere = () => document.body.dataset.view === 'lobby';
+
+  /** 채팅이 눈에 보이는지. 자판에 가린 몫까지 빼려고 visualViewport 로 잰다 */
+  function chatSeen() {
+    const r = $('#chat').getBoundingClientRect(), v = window.visualViewport;
+    const top = v ? v.offsetTop : 0, bottom = top + (v ? v.height : innerHeight);
+    return Math.min(r.bottom, bottom) - Math.max(r.top, top) >= Math.min(60, r.height / 2);
+  }
+
+  /** 채팅이 화면에 들어왔으면(혹은 대기방을 떠났으면) 숫자와 말풍선을 거둔다 */
+  function chatLook() {
+    if (!chatUnread && $('#chatPeek').hidden) return;
+    if (chatHere() && !chatSeen()) return;
+    chatUnread = 0; chatBadge(); chatPeekOff();
+  }
+  addEventListener('scroll', chatLook, { passive: true, capture: true });
+  addEventListener('resize', chatLook);
+  if (window.visualViewport) visualViewport.addEventListener('resize', chatLook);
+
+  /** 다른 방에 들어가거나 방을 나오면 전 방의 안 읽은 수를 들고 가지 않는다 */
+  function chatReset() {
+    chatUnread = 0; chatBadge(); chatPeekOff();
+    chatAway = 0; chatTitle();
+  }
+
+  /** 채팅으로 올라간다 */
+  function chatGo() {
+    $('#chat').scrollIntoView({ block: 'nearest', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+    chatUnread = 0; chatBadge(); chatPeekOff();
+  }
+  $('#chatBtn').addEventListener('click', chatGo);
+  $('#chatPeek').addEventListener('click', chatGo);
+
+  function chatBadge() {
+    const n = $('#chatN');
+    n.textContent = chatUnread > 99 ? '99+' : chatUnread;
+    $('#chatBtn').hidden = !chatUnread;
+    $('#chatBtn').setAttribute('aria-label', `채팅으로 — 안 읽은 말 ${chatUnread}개`);
+    if (!chatUnread) return;
+    n.classList.remove('pop'); void n.offsetWidth; n.classList.add('pop');
+  }
+
+  function chatPeek(name, text) {
+    const p = $('#chatPeek');
+    p.innerHTML = `<b>${esc(name)}</b>${esc(text)}`;
+    p.classList.remove('bye'); p.hidden = false;
+    p.style.animation = 'none'; void p.offsetWidth; p.style.animation = '';
+    clearTimeout(chatPeekT);
+    chatPeekT = setTimeout(() => {
+      p.classList.add('bye');
+      chatPeekT = setTimeout(chatPeekOff, 260);
+    }, Math.min(6000, Math.max(3000, 1200 + 70 * text.length)));
+  }
+
+  function chatPeekOff() {
+    clearTimeout(chatPeekT);
+    const p = $('#chatPeek'); p.hidden = true; p.classList.remove('bye');
+  }
+
+  function chatTitle() {
+    document.title = (chatAway ? `(${chatAway > 99 ? '99+' : chatAway}) ` : '') + chatTitle0;
+  }
+
+  function chatBack() {
+    if (chatAway && !document.hidden && document.hasFocus()) { chatAway = 0; chatTitle(); }
+  }
+  document.addEventListener('visibilitychange', chatBack);
+  addEventListener('focus', chatBack);
   $('#chatForm').addEventListener('submit', e => {
     e.preventDefault();
     const text = $('#chatIn').value.trim();

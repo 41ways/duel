@@ -30,6 +30,8 @@
 <header class="top">
   <a class="brand" href="https://41ways.github.io/norara/">norara</a>
   <span>
+    <!-- 대기방에서 채팅이 화면 밖으로 밀려 있을 때만 뜬다 — 안 읽은 말 수. 누르면 채팅으로 올라간다 -->
+    <button class="icon chat-btn" id="chatBtn" hidden aria-label="채팅으로">💬<span class="chat-n" id="chatN"></span></button>
     <button class="icon" id="muteBtn" aria-label="소리">🔊</button>
     <button class="icon" id="themeBtn" aria-label="어둡게">🌙</button>
     <button class="icon" id="quitBtn" aria-label="그만하기">✕</button>
@@ -143,6 +145,7 @@
 </div>
 
 <div id="toast"></div>
+<div id="chatPeek" class="chat-peek" hidden role="status" aria-live="polite"></div>
 
 <script src="/duel.js"></script>
 <script src="/sound.js"></script>

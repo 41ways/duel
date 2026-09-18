@@ -231,6 +231,33 @@ kbd { display: inline-block; white-space: nowrap; padding: 0 5px; border: 1.5px 
 .chat .btn { color: var(--paper); border-color: var(--paper); }
 .chat .btn:hover { background: var(--paper); color: var(--ink); }
 
+/* 채팅이 화면 밖에 있을 때 온 말 — 머리글 채팅 단추의 빨간 숫자와, 그 아래 말풍선. 누르면 채팅으로 간다 */
+.chat-btn { position: relative; font-size: 15px; line-height: 1; padding: 0; vertical-align: middle; }
+.chat-btn[hidden], .chat-peek[hidden] { display: none; }
+.chat-n {
+  position: absolute; top: -5px; right: -6px;
+  min-width: 18px; height: 18px; border-radius: 999px; padding: 0 4px;
+  font: 11px/16px var(--slab); letter-spacing: 0;
+  background: var(--red); color: var(--paper-hi); border: 1px solid var(--paper);
+}
+.chat-n.pop { animation: chatPop .5s cubic-bezier(.3,1.7,.5,1); }
+@keyframes chatPop { from { transform: scale(.3); } }
+.chat-peek {
+  position: fixed; top: calc(54px + env(safe-area-inset-top)); right: 16px; z-index: 6;
+  max-width: min(300px, calc(100vw - 32px));
+  padding: 8px 12px; border-radius: 13px 4px 13px 13px;
+  background: var(--panel); color: var(--panel-fg); border: 1px solid var(--paper-rule);
+  box-shadow: 0 12px 26px -12px var(--shadow);
+  font-size: 14px; line-height: 1.45; cursor: pointer; word-break: break-word;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
+  animation: chatPeekIn .2s ease-out; transition: opacity .25s, transform .25s;
+}
+.chat-peek b { font: 12px var(--slab); color: var(--gild); margin-right: 8px; letter-spacing: .03em; }
+body[data-mode="samurai"] .chat-peek b { font: 900 14px var(--kr); letter-spacing: 0; }
+.chat-peek.bye { opacity: 0; transform: translateY(-6px); }
+@keyframes chatPeekIn { from { opacity: 0; transform: translateY(-8px); } }
+@media (prefers-reduced-motion: reduce) { .chat-peek, .chat-n.pop { animation: none; transition: none; } }
+
 .slotmenu {
   position: fixed; z-index: 6; pointer-events: auto; display: grid; gap: 8px; padding: 0 12px;
   background: var(--paper); color: var(--ink); border: 3px solid var(--ink);
