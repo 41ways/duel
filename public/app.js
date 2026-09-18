@@ -389,6 +389,8 @@
     const d = s.duel;
     if (!d) return;
     const fresh = !G || G.kind !== 'net' || (prev && prev.phase !== 'playing' && s.phase === 'playing');
+    // 지금 판 중인지 — 참가자도 알린다(판 수는 방장만 세지만, "지금 누가 있나"는 사람마다 센다)
+    if (window.norara && norara.live) norara.live(s.phase === 'playing');
     // 판 수 세기 — 방장 화면에서만. 사람마다 보내면 한 판이 인원수만큼 세어진다.
     if (prev && prev.phase !== 'playing' && s.phase === 'playing' && s.hostId === s.meId && window.norara) {
       gameAt = Date.now();
