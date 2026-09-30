@@ -40,7 +40,7 @@
       for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
       loadFiles();
     }
-    if (ctx.state === 'suspended') ctx.resume();
+    if (ctx.state === 'suspended') ctx.resume().catch(() => {}); // 소리 장치를 못 열면(이어폰 뺌 등) 조용히 넘어간다
     return ctx;
   }
 
