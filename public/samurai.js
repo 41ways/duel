@@ -50,7 +50,7 @@
   const OPP = { x: 690, y: 616, h: 292 };
 
   const base = {};
-  for (const k of ['draw', 'board', 'westHome', 'backToSelect', 'round', 'decoy', 'shoot', 'early', 'result', 'drawWipe']) base[k] = P[k];
+  for (const k of ['draw', 'board', 'westHome', 'backToSelect', 'round', 'decoy', 'shoot', 'early', 'result', 'drawWipe', 'resumeView']) base[k] = P[k];
 
   const isSam = w => w.mode === 'samurai';
 
