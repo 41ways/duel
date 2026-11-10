@@ -524,19 +524,39 @@
   });
 
   // 채팅
+  /* 채팅: 위로 올려 읽는 중이면 새 글이 와도 끌어내리지 않는다 (전 게임 공통)
+     ol 이라 단추는 li.chat-more 로 감싼다 */
+  function chatAtEnd(log) { return !log.clientHeight || log.scrollHeight - log.scrollTop - log.clientHeight < 48; }
+  function chatFollow(log, atEnd, mine) {
+    let more = log.querySelector('.chat-more');
+    if (atEnd || mine) { if (more) more.remove(); log.scrollTop = log.scrollHeight; return; }
+    if (!more) {
+      more = document.createElement('li'); more.className = 'chat-more';
+      more.style.cssText = 'position:sticky;bottom:6px;display:block;width:max-content;margin:4px auto 0;padding:0;list-style:none;z-index:2;flex:none;align-self:center';
+      const b = document.createElement('button'); b.type = 'button'; b.textContent = '↓ 새 메시지';
+      b.style.cssText = 'display:block;padding:4px 12px;border:0;border-radius:4px;background:rgba(0,0,0,.72);color:#fff;font:inherit;font-size:12.5px;line-height:1.4;cursor:pointer';
+      b.onclick = () => { log.scrollTop = log.scrollHeight; };
+      more.appendChild(b);
+    }
+    log.appendChild(more); // 늘 맨 끝에
+    if (!log._chatMoreWatch) { log._chatMoreWatch = true; log.addEventListener('scroll', () => { const m = log.querySelector('.chat-more'); if (m && chatAtEnd(log)) m.remove(); }); }
+  }
+
   function addChat(m) {
     const li = document.createElement('li');
+    const mine = !m.sys && N && m.from === N.meId;
     if (m.sys) { li.className = 'sys'; li.textContent = m.text; }
     else {
       const b = document.createElement('b'); b.textContent = m.name;
       const sp = document.createElement('span'); sp.textContent = m.text;
       li.append(b, sp);
-      if (N && m.from === N.meId) li.className = 'me';
+      if (mine) li.className = 'me';
     }
     const log = $('#chatLog');
+    const atEnd = chatAtEnd(log);
     log.appendChild(li);
     while (log.children.length > 40) log.firstChild.remove();
-    log.scrollTop = log.scrollHeight;
+    chatFollow(log, atEnd, mine);
 
     if (m.sys || (N && m.from === N.meId)) return;
     if (chatHere() && !chatSeen()) { chatUnread++; chatBadge(); chatPeek(m.name, m.text); }
